@@ -1,0 +1,58 @@
+/* Tailwind (v4) */
+@import "tailwindcss";
+
+/* ---- Base resets & mobile overflow fixes ---- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
+body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Font smoothing */
+:root { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* ---- Theme tokens (keep these) ---- */
+:root {
+  --background: #0a0a0a; /* default to dark to match design */
+  --foreground: #ededed;
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-geist-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+/* If you really want automatic light mode, flip the defaults and keep this media query: */
+/*
+:root { --background: #ffffff; --foreground: #171717; }
+@media (prefers-color-scheme: dark) {
+  :root { --background: #0a0a0a; --foreground: #ededed; }
+}
+*/
+
+/* Tailwind v4 inline theme hook */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+/* ---- Tailwind base layer: set default text color using your tokens ---- */
+@layer base {
+  html { color-scheme: dark; } /* matches our default dark look */
+  body {
+    font-family: var(--font-sans);
+    color: var(--foreground);
+    background: var(--background);
+  }
+}
+
+/* Optional: nicer focus ring utility */
+.focus-ring { outline: none; box-shadow: 0 0 0 2px rgba(217, 70, 239, 0.6); }
+
+/* Respect reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
