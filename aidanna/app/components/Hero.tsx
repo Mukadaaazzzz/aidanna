@@ -21,13 +21,13 @@ export default function Hero() {
       <div className="absolute inset-0 sm:hidden">
         {people.slice(0, 4).map((p, i) => {
           const mobilePositions = [
-            "left-2 top-20",
-            "right-2 top-24",
-            "left-3 bottom-24",
-            "right-1 bottom-20"
+            "left-3 top-16",
+            "right-3 top-12",
+            "left-2 bottom-16",
+            "right-2 bottom-12"
           ];
           const mobileRotations = ["-12", "10", "-8", "12"];
-          const mobileSizes = ["w-20", "w-24", "w-22", "w-20"];
+          const mobileSizes = ["w-28", "w-32", "w-28", "w-32"];
           
           return (
             <motion.div
@@ -50,7 +50,7 @@ export default function Hero() {
                 src={p.src}
                 alt={p.alt}
                 fill
-                sizes="96px"
+                sizes="128px"
                 className="object-cover"
                 priority={i < 2}
               />
@@ -106,7 +106,7 @@ export default function Hero() {
           <br className="hidden sm:block" />
           with{" "}
           <span className="relative inline-block">
-            <span className="bg-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
               stories
             </span>
             <motion.svg
@@ -127,8 +127,8 @@ export default function Hero() {
               <defs>
                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#a855f7" />
-                  <stop offset="50%" stopColor="#a855f7" />
-                  <stop offset="100%" stopColor="#a855f7" />
+                  <stop offset="50%" stopColor="#ec4899" />
+                  <stop offset="100%" stopColor="#fb923c" />
                 </linearGradient>
               </defs>
             </motion.svg>
@@ -154,7 +154,7 @@ export default function Hero() {
         >
           <Link
             href="/app"
-            className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-500 px-8 py-4 text-base font-bold text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 sm:w-auto"
+            className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 px-8 py-4 text-base font-bold text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 sm:w-auto"
           >
             Try Aidanna
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
