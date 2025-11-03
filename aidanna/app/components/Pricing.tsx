@@ -1,48 +1,132 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Crown, CheckCircle2 } from "lucide-react";
-
+import { CheckCircle2, Crown, Zap, Users, BookOpen } from "lucide-react";
 
 export default function Pricing() {
-const tiers = [
-{ name: "Starter", price: "$0", tagline: "Try Aidanna", cta: "Get Started", popular: false, features: ["5 uploads / month","Comedy & Story modes","Mindmaps & Flashcards"] },
-{ name: "Pro", price: "$14/mo", tagline: "Level up your learning", cta: "Go Pro", popular: true, features: ["Unlimited uploads","All modes + Mystery","Adaptive Challenges","Progress insights","Priority access"] },
-{ name: "Team", price: "$29/mo", tagline: "For classrooms & groups", cta: "Contact Sales", popular: false, features: ["Seats & roles","Shared sets & maps","Classroom dashboards","SSO & priority support"] },
-];
+  const tiers = [
+    {
+      name: "Starter",
+      price: "$0",
+      description: "Perfect for trying storytelling",
+      icon: BookOpen,
+      popular: false,
+      features: [
+        "3 stories per month",
+        "Basic narrative mode", 
+        "PDF upload (up to 5 pages)",
+        "Standard support"
+      ],
+      cta: "Start Free",
+      href: "/signup"
+    },
+    {
+      name: "Pro Learner",
+      price: "$29",
+      description: "For certification students & professionals",
+      icon: Zap,
+      popular: true,
+      features: [
+        "Unlimited stories",
+        "All story modes (Narrative, Dialogue, Case Study)",
+        "Large PDF processing", 
+        "Interactive scenarios",
+        "Progress analytics",
+        "Priority support"
+      ],
+      cta: "Go Pro",
+      href: "/signup?plan=pro"
+    },
+    {
+      name: "Team",
+      price: "$99",
+      description: "For corporate training & classrooms",
+      icon: Users,
+      popular: false,
+      features: [
+        "Everything in Pro",
+        "5 team seats",
+        "Shared story library",
+        "LMS integration",
+        "Admin dashboard",
+        "Custom templates",
+        "Dedicated support"
+      ],
+      cta: "Contact Sales", 
+      href: "/contact"
+    }
+  ];
 
+  return (
+    <section id="pricing" className="py-20 bg-gray-50">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            Pricing for <span className="text-purple-600">Every Learner</span>
+          </h2>
+          <p className="mt-4 text-xl text-gray-600">
+            Start free, upgrade as you grow. No hidden fees.
+          </p>
+        </div>
 
-return (
-<section id="pricing" className="py-16 sm:py-24">
-<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-<div className="mx-auto max-w-3xl text-center">
-<h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Simple, transparent <span className="text-fuchsia-300">pricing</span></h2>
-<p className="mt-3 text-white/70">Start free. Upgrade when you’re ready.</p>
-</div>
-<div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
-{tiers.map((t) => (
-<div key={t.name} className={`relative rounded-3xl border bg-white/5 p-6 ${t.popular ? "border-fuchsia-400/40 ring-2 ring-fuchsia-400/40" : "border-white/10"}`}>
-{t.popular && (
-<div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-fuchsia-500 px-3 py-1 text-xs font-semibold text-white">Most Popular</div>
-)}
-<div className="flex items-baseline justify-between">
-<h3 className="text-lg font-semibold">{t.name}</h3>
-{t.popular ? <Crown className="h-5 w-5 text-fuchsia-300" /> : null}
-</div>
-<p className="mt-1 text-sm text-white/70">{t.tagline}</p>
-<p className="mt-4 text-3xl font-semibold">{t.price}</p>
-<ul className="mt-4 space-y-2 text-sm text-white/80">
-{t.features.map((f) => (
-<li key={f} className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-fuchsia-300" /> {f}</li>
-))}
-</ul>
-<Link href="#" className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium ${t.popular ? "bg-white text-neutral-900 hover:bg-white/90" : "border border-white/15 bg-white/5 text-white hover:bg-white/10"}`}>
-{t.cta} <ArrowRight className="h-4 w-4" />
-</Link>
-</div>
-))}
-</div>
-<p className="mt-6 text-center text-xs text-white/50">Prices in USD. Taxes may apply. Cancel anytime.</p>
-</div>
-</section>
-);
+        <div className="mt-16 grid gap-8 lg:grid-cols-3">
+          {tiers.map((tier) => (
+            <div
+              key={tier.name}
+              className={`relative rounded-2xl border p-8 transition-all hover:scale-105 ${
+                tier.popular
+                  ? "border-purple-500 bg-gradient-to-br from-purple-50 to-fuchsia-50 ring-2 ring-purple-500/20"
+                  : "border-gray-200 bg-gradient-to-br from-gray-50 to-white"
+              }`}
+            >
+              {tier.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 px-4 py-1 text-sm font-semibold text-white">
+                    <Crown className="h-4 w-4" />
+                    Most Popular
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                  tier.popular ? "bg-white text-purple-600" : "bg-purple-500/20 text-purple-600"
+                }`}>
+                  <tier.icon className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900">{tier.name}</h3>
+                  <p className="text-gray-600">{tier.description}</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <span className="text-4xl font-bold text-gray-900">{tier.price}</span>
+                <span className="text-gray-600">/{tier.name === "Team" ? "month" : "month"}</span>
+              </div>
+
+              <ul className="space-y-4 mb-8">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-700">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href={tier.href}
+                className={`block w-full rounded-xl py-4 text-center font-semibold transition ${
+                  tier.popular
+                    ? "bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white hover:from-purple-600 hover:to-fuchsia-600"
+                    : "bg-gray-900 text-white hover:bg-gray-800"
+                }`}
+              >
+                {tier.cta}
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }

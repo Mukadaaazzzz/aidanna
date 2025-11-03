@@ -2,15 +2,12 @@
 import React from "react";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
-import Trustbar from "./components/Trustbar";
+
 import Modes from "./components/Modes";
 import Features from "./components/Features";
-import ImmersionUpload from "./components/ImmersionUpload";
-import MindmapFlashcards from "./components/MindMapFlashcards";
-import Challenge from "./components/Challenge";
+
 import Pricing from "./components/Pricing";
 import Testimonials from "./components/Testimonials";
-import FAQ from "./components/FAQ";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 
@@ -21,15 +18,11 @@ return (
 <Header />
 <main>
 <Hero />
-<Trustbar />
 <Modes />
 <Features />
-<ImmersionUpload />
-<MindmapFlashcards />
-<Challenge />
 <Pricing />
 <Testimonials />
-<FAQ />
+
 <CTA />
 </main>
 <Footer />

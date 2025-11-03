@@ -1,70 +1,97 @@
 "use client";
-
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Menu, X } from "lucide-react";
-import logoPng from "@/public/logo.png"; // <— static import for stable SSR/CSR
+import { ArrowRight, Menu, X, Users, FileText } from "lucide-react";
+import { Poppins } from "next/font/google"; // ⬅️ Import Poppins
+import logoPng from "@/public/logo.png";
+
+// ⬇️ Configure the Poppins font
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"], // SemiBold–ExtraBold range for logo
+});
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+
   const nav = [
-    { href: "#modes", label: "Modes" },
-    { href: "#features", label: "Features" },
-    { href: "#challenge", label: "Challenge" },
-    { href: "#pricing", label: "Pricing" },
-    { href: "#faq", label: "FAQ" },
+    { href: "/case-studies", label: "Case-studies", icon: FileText },
+    { href: "/blog", label: "Blog", icon: FileText },
+    { href: "#pricing", label: "Pricing", icon: Users },
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-neutral-950/70 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/60">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="#" className="flex items-center gap-3">
-          {/* Avoid odd, non-tailwind sizes like h-15; rely on width/height */}
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/90 backdrop-blur-xl supports-[backdrop-filter]:bg-white/80">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        {/* Logo Section */}
+        <Link href="/" className="flex items-center group">
           <Image
             src={logoPng}
-            alt="Aidanna"
-            width={36}
-            height={36}
+            alt="Aidanna - Learn Through Stories"
+            width={40}
+            height={40}
             priority
-            className="rounded"
+            className="rounded-lg transition-transform group-hover:scale-105"
           />
-          <span className="font-semibold tracking-tight">Aidanna</span>
+          <span
+            className={`${poppins.className}  text-xl sm:text-1xl tracking-tight text-gray-800 transition-colors group-hover:text-purple-600`}
+          >
+            Aidanna
+          </span>
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
-          {nav.map((n) => (
-            <a key={n.href} href={n.href} className="text-sm text-white/70 transition hover:text-white">
-              {n.label}
-            </a>
+        {/* Desktop Navigation */}
+        <nav className="hidden items-center gap-6 lg:flex">
+          {nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-2 text-sm text-gray-600 transition-all hover:text-purple-600 hover:scale-105"
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
           ))}
           <Link
-            href="#pricing"
-            className="inline-flex items-center gap-2 rounded-full border border-fuchsia-500/40 bg-fuchsia-500/10 px-4 py-2 text-sm font-medium text-fuchsia-200 shadow-sm transition hover:bg-fuchsia-500/20"
+            href="/signin"
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:from-purple-600 hover:to-fuchsia-600 hover:shadow-purple-500/25"
           >
-            Get Started <ArrowRight className="h-4 w-4" />
+            SignIn <ArrowRight className="h-4 w-4" />
           </Link>
         </nav>
 
-        <button aria-label="Open menu" className="md:hidden" onClick={() => setOpen((v) => !v)}>
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        {/* Mobile Menu Button */}
+        <button
+          aria-label="Open menu"
+          className="lg:hidden p-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? <X className="h-5 w-5 text-gray-700" /> : <Menu className="h-5 w-5 text-gray-700" />}
         </button>
       </div>
 
+      {/* Mobile Navigation */}
       {open && (
-        <div className="border-t border-white/10 md:hidden">
+        <div className="border-t border-gray-200 bg-white/95 backdrop-blur-xl lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4 sm:px-6 lg:px-8">
-            {nav.map((n) => (
-              <a key={n.href} href={n.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2 text-white/80 hover:bg-white/5">
-                {n.label}
-              </a>
+            {nav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 rounded-lg px-4 py-3 text-gray-700 transition-all hover:bg-gray-100 hover:text-gray-900"
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
             ))}
             <Link
-              href="#pricing"
+              href="/signin"
               onClick={() => setOpen(false)}
-              className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-fuchsia-600 px-4 py-2 font-medium text-white hover:bg-fuchsia-500"
+              className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-fuchsia-500 px-4 py-3 font-semibold text-white transition hover:from-purple-600 hover:to-fuchsia-600"
             >
-              Get Started <ArrowRight className="h-4 w-4" />
+              SignIn <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>

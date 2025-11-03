@@ -1,58 +1,225 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { ShieldCheck, Zap, BadgeCheck, Sparkles } from "lucide-react";
-import ShowcaseCard from "../components/ShowcaseCard";
-
-
+import { ArrowRight } from "lucide-react";
 
 export default function Hero() {
-return (
-<section className="relative isolate overflow-hidden">
-<BackgroundGlow />
-<div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
-<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="space-y-6">
-<div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-<Sparkles className="h-4 w-4" />
-The first emotionally intelligent, invisible teacher
-</div>
-<h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl md:text-6xl">
-Meet <span className="bg-gradient-to-r from-fuchsia-400 via-violet-400 to-sky-400 bg-clip-text text-transparent">Aidanna</span>
-</h1>
-<p className="max-w-xl text-base text-white/70 sm:text-lg">
-Aidanna understands you—mood, pace, style—and shapes lessons that fit like a glove. It learns from every interaction, just like a real human teacher, so you learn faster, deeper, and with joy.
-</p>
-<div className="flex flex-wrap gap-3">
-<Link href="#pricing" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-neutral-950 shadow-lg hover:bg-white/90">
-Start Learning
-</Link>
-<Link href="#features" className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">
-Explore Features
-</Link>
-</div>
-<div className="mt-6 flex flex-wrap gap-6 text-xs text-white/50">
-<span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Private by design</span>
-<span className="inline-flex items-center gap-2"><Zap className="h-4 w-4" /> Multisensory learning</span>
-<span className="inline-flex items-center gap-2"><BadgeCheck className="h-4 w-4" /> Learns & adapts to you</span>
-</div>
-</motion.div>
-<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }} className="relative">
-<ShowcaseCard />
-</motion.div>
-</div>
-</section>
-);
+  const people = [
+    { src: "/people/person1.jpg", alt: "Smiling learner" },
+    { src: "/people/person2.jpg", alt: "Focused student" },
+    { src: "/people/person3.jpg", alt: "Joyful reader" },
+    { src: "/people/person4.jpg", alt: "Creative thinker" },
+  ];
+
+  return (
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-white px-4 py-16 text-center text-gray-900 sm:px-6 lg:px-8">
+      <AnimatedBackground />
+
+      {/* Mobile: Floating portraits in corners */}
+      <div className="absolute inset-0 sm:hidden">
+        {people.slice(0, 4).map((p, i) => {
+          const mobilePositions = [
+            "left-2 top-20",
+            "right-2 top-24",
+            "left-3 bottom-24",
+            "right-1 bottom-20"
+          ];
+          const mobileRotations = ["-12", "10", "-8", "12"];
+          const mobileSizes = ["w-20", "w-24", "w-22", "w-20"];
+          
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.7, rotate: 0 }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1,
+                rotate: parseInt(mobileRotations[i])
+              }}
+              transition={{ 
+                duration: 0.7, 
+                delay: 0.4 + i * 0.15,
+                type: "spring",
+                stiffness: 100
+              }}
+              className={`absolute ${mobilePositions[i]} ${mobileSizes[i]} aspect-[3/4] overflow-hidden rounded-2xl border-2 border-gray-200 shadow-2xl shadow-purple-500/20`}
+            >
+              <Image
+                src={p.src}
+                alt={p.alt}
+                fill
+                sizes="96px"
+                className="object-cover"
+                priority={i < 2}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-purple-500/30 via-transparent to-transparent" />
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: Floating portraits */}
+      <div className="absolute inset-0 hidden sm:block">
+        {people.map((p, i) => {
+          const positions = [
+            "left-[8%] top-[20%]",
+            "right-[10%] top-[18%]",
+            "left-[12%] bottom-[25%]",
+            "right-[12%] bottom-[22%]"
+          ];
+          const rotations = ["-8", "6", "-5", "7"];
+          
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 + i * 0.12 }}
+              className={`absolute ${positions[i]} aspect-[3/4] w-24 overflow-hidden rounded-xl border border-gray-200 shadow-2xl shadow-purple-500/15 md:w-28 lg:w-32 xl:w-36`}
+              style={{ transform: `rotate(${rotations[i]}deg)` }}
+            >
+              <Image
+                src={p.src}
+                alt={p.alt}
+                fill
+                sizes="(max-width: 768px) 96px, (max-width: 1024px) 112px, (max-width: 1280px) 128px, 144px"
+                className="object-cover"
+                priority={i < 2}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-purple-500/25 via-transparent to-transparent" />
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Text content */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
+        className="relative z-10 max-w-4xl"
+      >
+        <h1 className="text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+          Study smarter{" "}
+          <br className="hidden sm:block" />
+          with{" "}
+          <span className="relative inline-block">
+            <span className="bg-purple-400 bg-clip-text text-transparent">
+              stories
+            </span>
+            <motion.svg
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 1.2, delay: 0.8, ease: "easeInOut" }}
+              className="absolute -bottom-2 left-0 w-full"
+              viewBox="0 0 200 8"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M2 5C40 2 80 3 100 4C120 5 160 6 198 4"
+                stroke="url(#gradient)"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#a855f7" />
+                  <stop offset="50%" stopColor="#a855f7" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+            </motion.svg>
+          </span>
+        </h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-gray-600 sm:mt-6 sm:text-lg md:text-xl"
+        >
+          From boring books to stories you'll love. Transform any topic into
+          <br className="hidden sm:block" />
+          captivating narratives that make learning unforgettable.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.45 }}
+          className="mt-8 sm:mt-10"
+        >
+          <Link
+            href="/app"
+            className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-500 px-8 py-4 text-base font-bold text-white shadow-xl shadow-purple-500/30 transition-all hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 sm:w-auto"
+          >
+            Try Aidanna
+            <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </motion.div>
+      </motion.div>
+    </section>
+  );
 }
 
+function AnimatedBackground() {
+  return (
+    <div className="absolute inset-0 -z-10 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50" />
+      
+      <motion.div
+        animate={{
+          x: [0, 100, 0],
+          y: [0, -50, 0],
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute -left-40 top-0 h-96 w-96 rounded-full bg-purple-300 blur-3xl will-change-transform"
+      />
+      
+      <motion.div
+        animate={{
+          x: [0, -80, 0],
+          y: [0, 80, 0],
+          scale: [1, 1.3, 1],
+          opacity: [0.3, 0.5, 0.3],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 3,
+        }}
+        className="absolute -right-40 top-1/4 h-[500px] w-[500px] rounded-full bg-pink-300 blur-3xl will-change-transform"
+      />
+      
+      <motion.div
+        animate={{
+          x: [0, 60, 0],
+          y: [0, -60, 0],
+          scale: [1, 1.15, 1],
+          opacity: [0.25, 0.4, 0.25],
+        }}
+        transition={{
+          duration: 18,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 6,
+        }}
+        className="absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-orange-300 blur-3xl will-change-transform"
+      />
 
-function BackgroundGlow() {
-return (
-<div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-<div className="absolute left-1/2 top-[-10%] aspect-square w-[80vw] -translate-x-1/2 rounded-full bg-fuchsia-600/20 blur-3xl" />
-<div className="absolute right-[-10%] bottom-[-20%] aspect-square w-[50vw] rounded-full bg-sky-500/10 blur-3xl" />
-</div>
-);
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8b5cf610_1px,transparent_1px),linear-gradient(to_bottom,#8b5cf610_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_60%,transparent_100%)]" />
+      
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(255,255,255,0.5)_100%)]" />
+    </div>
+  );
 }
-
-
