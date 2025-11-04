@@ -1,3 +1,4 @@
+# netlify.toml (at repo root)
 [build]
   command = "npm run build"
   publish = ".next"
@@ -7,5 +8,8 @@
 
 [functions]
   node_bundler = "esbuild"
-  # Keep OpenAI out of the bundle to avoid ESM/CJS issues
   external_node_modules = ["openai"]
+
+# (optional but recommended)
+[build.environment]
+  NODE_VERSION = "20"
