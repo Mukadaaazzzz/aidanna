@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Poppins } from "next/font/google";
+import '@mantine/core/styles.css';
+import { MantineProvider } from '@mantine/core';
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -28,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${poppins.className} bg-neutral-950`}>
       <body className="min-h-dvh bg-gradient-to-b from-neutral-950 via-neutral-950 to-black text-white antialiased overflow-x-clip">
-        {children}
+       <MantineProvider>{children}</MantineProvider>
       </body>
     </html>
   );

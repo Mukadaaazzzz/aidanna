@@ -4,30 +4,36 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
-  Send,
-  BookOpen,
-  Users,
-  FileText,
-  Play,
-  Sparkles,
-  LogOut,
-  Plus,
-  Zap,
-  Loader2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+  Container,
+  Paper,
+  Textarea,
+  Button,
+  Avatar,
+  Group,
+  Stack,
+  Text,
+  Card,
+  ActionIcon,
+  Menu,
+  rem,
+  Box,
+  SegmentedControl,
+  SimpleGrid,
+  Divider,
+} from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+  IconBook,
+  IconUsers,
+  IconFileText,
+  IconPlayerPlay,
+  IconLogout,
+  IconSettings,
+  IconLoader2,
+  IconFlask,
+  IconBriefcase,
+  IconCpu,
+} from "@tabler/icons-react";
 
 type Message = {
   role: "user" | "assistant" | "system";
@@ -36,80 +42,93 @@ type Message = {
 
 type StoryMode = "narrative" | "dialogue" | "case-study" | "interactive";
 
-const API_BASE = "https://aidanna-backend.onrender.com";
+const API_BASE = "https://aidanna-backend.vercel.app/api";
 
 const DEFAULT_MODES: Record<
   StoryMode,
-  { icon: any; label: string; color?: string; gradient: string }
+  { icon: any; label: string; color: string }
 > = {
-  narrative: { 
-    icon: BookOpen, 
-    label: "Narrative", 
-    color: "bg-purple-500",
-    gradient: "from-purple-500 to-purple-600"
+  narrative: {
+    icon: IconBook,
+    label: "Narrative",
+    color: "grape",
   },
-  dialogue: { 
-    icon: Users, 
-    label: "Dialogue", 
-    color: "bg-blue-500",
-    gradient: "from-blue-500 to-cyan-600"
+  dialogue: {
+    icon: IconUsers,
+    label: "Dialogue",
+    color: "cyan",
   },
-  "case-study": { 
-    icon: FileText, 
-    label: "Case Study", 
-    color: "bg-green-500",
-    gradient: "from-green-500 to-emerald-600"
+  "case-study": {
+    icon: IconFileText,
+    label: "Case Study",
+    color: "teal",
   },
-  interactive: { 
-    icon: Play, 
-    label: "Interactive", 
-    color: "bg-orange-500",
-    gradient: "from-orange-500 to-red-500"
+  interactive: {
+    icon: IconPlayerPlay,
+    label: "Interactive",
+    color: "orange",
   },
 };
+
+const LEARNING_PROMPTS = [
+  {
+    icon: IconFlask,
+    text: "Explain photosynthesis through a story",
+    category: "Science",
+  },
+  {
+    icon: IconBriefcase,
+    text: "Teach me about supply and demand",
+    category: "Business",
+  },
+  {
+    icon: IconCpu,
+    text: "How does machine learning work?",
+    category: "Technology",
+  },
+];
 
 export default function AppPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedMode, setSelectedMode] = useState<StoryMode>("narrative");
-  const [modes, setModes] = useState<Record<string, any> | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const supabase = createClientComponentClient();
   const router = useRouter();
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
+  // --- Layout constants to ensure first-sight fit on desktop ---
+  const HEADER_HEIGHT = isMobile ? 64 : 72;
+  const MODEBAR_HEIGHT = messages.length > 0 ? (isMobile ? 52 : 56) : 0;
+  const COMPOSER_HEIGHT = isMobile ? 76 : 88;
 
   useEffect(() => {
+    let isMounted = true;
+
     const init = async () => {
       const {
         data: { user: gotUser },
       } = await supabase.auth.getUser();
+      if (!isMounted) return;
+
       if (!gotUser) {
         router.push("/signin");
         return;
       }
       setUser(gotUser);
-
-      setMessages([
-        {
-          role: "assistant",
-          content: `Hey ${gotUser.user_metadata?.name || "there"} 👋 — I'm Aidanna. Ready to learn through stories?`,
-        },
-      ]);
-
-      try {
-        const res = await fetch(`${API_BASE}/modes`);
-        if (res.ok) {
-          const json = await res.json();
-          setModes(json);
-        }
-      } catch {
-        setModes(null);
-      }
+      setIsLoadingUser(false);
     };
+
     init();
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, [router, supabase.auth]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -117,15 +136,11 @@ export default function AppPage() {
 
   const handleSendMessage = async () => {
     if (!input.trim() || loading) return;
+
     const userMsg: Message = { role: "user", content: input.trim() };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: "typing..." },
-    ]);
 
     try {
       const res = await fetch(`${API_BASE}/generate`, {
@@ -137,29 +152,33 @@ export default function AppPage() {
         }),
       });
 
-      const json = await res.json();
-      const reply = json.response || json.message || "No reply received.";
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(
+          errorData.error || `Request failed with status ${res.status}`
+        );
+      }
 
-      setMessages((prev) => {
-        const copy = [...prev];
-        copy[copy.length - 1] = { role: "assistant", content: reply };
-        return copy;
-      });
-    } catch (err) {
-      setMessages((prev) => {
-        const copy = [...prev];
-        copy[copy.length - 1] = {
+      const json = await res.json();
+      const reply = json.response || "No reply received.";
+
+      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
           role: "assistant",
-          content: "⚠️ Something went wrong. Try again.",
-        };
-        return copy;
-      });
+          content:
+            "⚠️ I’m having trouble connecting right now. Please try again shortly.",
+        },
+      ]);
+      console.error("API Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyPress = (e: any) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -171,197 +190,399 @@ export default function AppPage() {
     router.push("/");
   };
 
+  const handlePromptClick = (prompt: string) => {
+    setInput(prompt);
+    textareaRef.current?.focus();
+  };
+
   return (
-    <div className="flex h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur-xl shadow-sm">
-        
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              
-            <div>
-              
-              <Badge 
-                variant="secondary" 
-                className="text-xs font-medium bg-white/80 backdrop-blur border-gray-200"
-              >
-                <div className={`w-2 h-2 rounded-full ${DEFAULT_MODES[selectedMode].color} mr-1`}></div>
-                {DEFAULT_MODES[selectedMode].label} Mode
-              </Badge>
-            </div>
-          </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#fafafa",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Header (clean, minimal; no mode selector here) */}
+      <Paper
+        shadow="xs"
+        p={isMobile ? "sm" : "md"}
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          borderBottom: "1px solid #e9ecef",
+          background: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(10px)",
+          height: HEADER_HEIGHT,
+        }}
+      >
+        <Container size="lg" h="100%">
+          <Group justify="space-between" align="center" h="100%" wrap="nowrap">
+            <Group gap="sm" wrap="nowrap">
+              <Image
+                src="/logo.png"
+                alt="Aidanna Logo"
+                width={isMobile ? 28 : 34}
+                height={isMobile ? 28 : 34}
+                style={{ borderRadius: 8 }}
+              />
+              <Text fw={700} size={isMobile ? "lg" : "xl"}>
+                Aidanna
+              </Text>
+            </Group>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                className="rounded-full h-10 w-10 p-0 border border-gray-200 bg-white/50 backdrop-blur"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium">
+            <Menu shadow="md" width={220}>
+              <Menu.Target>
+                <ActionIcon variant="subtle" size="lg" radius="md">
+                  <Avatar
+                    size={isMobile ? "sm" : "md"}
+                    radius="md"
+                    variant="gradient"
+                    gradient={{ from: "grape", to: "violet", deg: 45 }}
+                  >
                     {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 backdrop-blur-xl bg-white/95 border-gray-200">
-              <DropdownMenuLabel className="text-gray-900">
-                {user?.user_metadata?.name || "User"}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleSignOut}
-                className="text-red-600 focus:text-red-600 cursor-pointer"
-              >
-                <LogOut className="mr-2 h-4 w-4" /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* Mode Selector */}
-        <div className="flex gap-3 overflow-x-auto px-6 pb-4">
-          {Object.keys(DEFAULT_MODES).map((m) => {
-            const cfg = DEFAULT_MODES[m as StoryMode];
-            const Icon = cfg.icon;
-            const active = selectedMode === m;
-            return (
-              <Button
-                key={m}
-                onClick={() => setSelectedMode(m as StoryMode)}
-                size="sm"
-                variant={active ? "default" : "outline"}
-                className={`
-                  rounded-full px-4 py-2 font-medium transition-all duration-200
-                  ${active 
-                    ? `bg-gradient-to-r ${cfg.gradient} text-white shadow-lg shadow-${cfg.color}/25 border-transparent` 
-                    : "bg-white/60 backdrop-blur border-gray-200 text-gray-700 hover:bg-white hover:shadow-md"
-                  }
-                `}
-              >
-                <Icon className="mr-2 h-4 w-4" /> 
-                {cfg.label}
-              </Button>
-            );
-          })}
-        </div>
-      </header>
-
-      {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {messages.map((m, i) => (
-            <div
-              key={i}
-              className={`flex gap-3 ${
-                m.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              {m.role === "assistant" && (
-                <div className="flex-shrink-0">
-                  <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
-                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 shadow-inner">
-                      <Sparkles className="h-4 w-4 text-white" />
-                    </AvatarFallback>
                   </Avatar>
-                </div>
-              )}
-              
-              <div className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"} max-w-[85%]`}>
-                <Card
-                  className={`
-                    px-5 py-4 rounded-3xl shadow-sm transition-all duration-200
-                    ${m.role === "user"
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25"
-                      : "bg-white/80 backdrop-blur border border-gray-100 shadow-gray-100"
-                    }
-                  `}
-                >
-                  <p className="whitespace-pre-wrap text-[15px] leading-relaxed font-medium">
-                    {m.content}
-                  </p>
-                </Card>
-                {m.role === "user" && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-bold">
-                        {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-gray-500 font-medium">
-                      {user?.user_metadata?.name || "You"}
-                    </span>
-                  </div>
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {user && (
+                  <>
+                    <Menu.Label>
+                      {user?.user_metadata?.name || "User"}
+                    </Menu.Label>
+                    <Menu.Divider />
+                  </>
                 )}
-              </div>
+                <Menu.Item
+                  leftSection={
+                    <IconSettings style={{ width: rem(14), height: rem(14) }} />
+                  }
+                >
+                  Settings
+                </Menu.Item>
+                <Menu.Item
+                  color="red"
+                  leftSection={
+                    <IconLogout style={{ width: rem(14), height: rem(14) }} />
+                  }
+                  onClick={handleSignOut}
+                >
+                  Sign out
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
+        </Container>
+      </Paper>
 
-              {m.role === "user" && (
-                <div className="flex-shrink-0">
-                  <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-500 text-white font-medium">
-                      {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
+      {/* Mode Bar (visible once user is in chat; not in header) */}
+      {messages.length > 0 && (
+        <Paper
+          p={isMobile ? 8 : 10}
+          withBorder
+          style={{
+            position: "sticky",
+            top: HEADER_HEIGHT,
+            zIndex: 90,
+            background: "#fff",
+            height: MODEBAR_HEIGHT,
+          }}
+        >
+          <Container size="md">
+            <Group justify="space-between" wrap="nowrap">
+              <Text size="sm" c="dimmed">
+                Choose a learning mode
+              </Text>
+              <SegmentedControl
+                value={selectedMode}
+                onChange={(value) => setSelectedMode(value as StoryMode)}
+                data={Object.entries(DEFAULT_MODES).map(([key, mode]) => ({
+                  value: key,
+                  label: mode.label,
+                }))}
+                size="xs"
+                radius="xl"
+              />
+            </Group>
+          </Container>
+        </Paper>
+      )}
+
+      {/* Main area: fits within the viewport height without forcing desktop scroll */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          // Reserve space so content isn't hidden behind the fixed composer
+          paddingBottom: COMPOSER_HEIGHT + 16,
+        }}
+      >
+        <Container size="md" py={isMobile ? "md" : "lg"}>
+          {messages.length === 0 ? (
+            // Welcome Screen (compact and above-the-fold on desktop)
+            <Stack
+              align="center"
+              gap={isMobile ? "md" : "lg"}
+              mt={isMobile ? 24 : 32}
+              px={isMobile ? "md" : 0}
+            >
+              {!isLoadingUser && user && (
+                <Text size={isMobile ? "md" : "lg"} fw={500} c="dimmed">
+                  Hi {user?.user_metadata?.name}
+                </Text>
               )}
-            </div>
-          ))}
+              <Text
+                size={isMobile ? 26 : 32}
+                fw={700}
+                ta="center"
+                style={{ lineHeight: 1.15 }}
+              >
+                What will you learn today?
+              </Text>
 
-          {loading && (
-            <div className="flex gap-3 text-gray-600 text-sm items-center pl-12">
-              <div className="flex gap-1">
-                <div className="h-2 w-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="h-2 w-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="h-2 w-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              </div>
-              <span className="font-medium">Crafting your story...</span>
+              <Box w="100%">
+                <Text size="sm" c="dimmed" ta="center" mb="xs">
+                  Pick a mode to get started
+                </Text>
+                <Group gap="xs" justify="center" wrap="wrap">
+                  {Object.entries(DEFAULT_MODES).map(([key, mode]) => {
+                    const Icon = mode.icon;
+                    const isActive = selectedMode === key;
+                    return (
+                      <Button
+                        key={key}
+                        size="sm"
+                        variant={isActive ? "filled" : "light"}
+                        color={mode.color}
+                        leftSection={<Icon size={16} />}
+                        onClick={() => setSelectedMode(key as StoryMode)}
+                        radius="xl"
+                      >
+                        {mode.label}
+                      </Button>
+                    );
+                  })}
+                </Group>
+              </Box>
+
+              <Divider w="100%" variant="dashed" />
+
+              <Text size="sm" c="dimmed" ta="center">
+                Try one of these to begin:
+              </Text>
+
+              {/* Prompt Cards */}
+              <Box w="100%">
+                <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+                  {LEARNING_PROMPTS.map((prompt, idx) => (
+                    <Card
+                      key={idx}
+                      shadow="xs"
+                      padding="lg"
+                      radius="md"
+                      withBorder
+                      style={{
+                        cursor: "pointer",
+                        transition: "transform .15s ease, box-shadow .15s ease",
+                      }}
+                      onClick={() => handlePromptClick(prompt.text)}
+                      className="hover-card"
+                    >
+                      <Stack gap="xs" align="flex-start">
+                        <prompt.icon size={20} color="#868e96" />
+                        <Text size="sm" c="dimmed" style={{ lineHeight: 1.5 }}>
+                          {prompt.text}
+                        </Text>
+                      </Stack>
+                    </Card>
+                  ))}
+                </SimpleGrid>
+              </Box>
+            </Stack>
+          ) : (
+            // Chat Messages Pane (viewport-fit)
+            <div
+              style={{
+                height: `calc(100vh - ${HEADER_HEIGHT + MODEBAR_HEIGHT + COMPOSER_HEIGHT + (isMobile ? 24 : 32)}px)`,
+                overflowY: "auto",
+                paddingRight: 2,
+              }}
+            >
+              <Stack gap={isMobile ? "sm" : "md"} mt="sm">
+                {messages.map((m, i) => (
+                  <Group
+                    key={i}
+                    align="flex-start"
+                    gap="md"
+                    justify={m.role === "user" ? "flex-end" : "flex-start"}
+                    wrap="nowrap"
+                  >
+                    {m.role === "assistant" && (
+                      <Avatar
+                        size={isMobile ? "sm" : "md"}
+                        radius="md"
+                        style={{ flexShrink: 0 }}
+                      >
+                        <Image
+                          src="/logo.png"
+                          alt="Aidanna"
+                          width={isMobile ? 24 : 28}
+                          height={isMobile ? 24 : 28}
+                          style={{ borderRadius: 6 }}
+                        />
+                      </Avatar>
+                    )}
+
+                    <Paper
+                      shadow="xs"
+                      p={isMobile ? "xs" : "md"}
+                      radius="lg"
+                      withBorder
+                      style={{
+                        maxWidth: isMobile ? "78%" : "72%",
+                        background:
+                          m.role === "user" ? "var(--mantine-color-dark-7)" : "#ffffff",
+                        color: m.role === "user" ? "#ffffff" : "inherit",
+                        borderColor:
+                          m.role === "user" ? "transparent" : "var(--mantine-color-gray-3)",
+                      }}
+                    >
+                      <Text
+                        size={isMobile ? "sm" : "sm"}
+                        style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
+                      >
+                        {m.content}
+                      </Text>
+                    </Paper>
+
+                    {m.role === "user" && (
+                      <Avatar
+                        size={isMobile ? "sm" : "md"}
+                        radius="md"
+                        variant="gradient"
+                        gradient={{ from: "grape", to: "violet", deg: 45 }}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
+                      </Avatar>
+                    )}
+                  </Group>
+                ))}
+
+                {loading && (
+                  <Group align="flex-start" gap="md" wrap="nowrap">
+                    <Avatar
+                      size={isMobile ? "sm" : "md"}
+                      radius="md"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <Image
+                        src="/logo.png"
+                        alt="Aidanna"
+                        width={isMobile ? 24 : 28}
+                        height={isMobile ? 24 : 28}
+                        style={{ borderRadius: 6 }}
+                      />
+                    </Avatar>
+                    <Paper shadow="xs" p={isMobile ? "xs" : "md"} radius="lg" withBorder>
+                      <Group gap="xs">
+                        <IconLoader2 size={isMobile ? 14 : 16} className="animate-spin" />
+                        <Text size={isMobile ? "sm" : "sm"} c="dimmed">
+                          Crafting your story...
+                        </Text>
+                      </Group>
+                    </Paper>
+                  </Group>
+                )}
+                <div ref={messagesEndRef} />
+              </Stack>
             </div>
           )}
-          <div ref={messagesEndRef} />
-        </div>
-      </main>
+        </Container>
+      </div>
 
-      {/* Input Area */}
-      <footer className="sticky bottom-0 bg-gradient-to-t from-white via-white to-white/80 backdrop-blur-2xl border-t border-gray-100 px-4 py-4">
-        <div className="max-w-4xl mx-auto flex gap-3 items-end">
-          <div className="flex-1 relative">
+      {/* Composer (fixed) */}
+      <Paper
+        shadow="xl"
+        p={isMobile ? "sm" : "md"}
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderTop: "1px solid #e9ecef",
+          background: "rgba(255, 255, 255, 0.98)",
+          backdropFilter: "blur(10px)",
+          height: COMPOSER_HEIGHT,
+        }}
+      >
+        <Container size="md" h="100%">
+          <Group align="flex-end" gap={isMobile ? "xs" : "md"} wrap="nowrap">
             <Textarea
               ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => setInput(e.currentTarget.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Type your question or story idea..."
-              className="min-h-[56px] max-h-32 flex-1 resize-none rounded-2xl bg-white/80 backdrop-blur border-2 border-gray-200 focus:border-purple-300 focus:ring-2 focus:ring-purple-100 px-4 py-3 text-[15px] font-medium shadow-sm transition-all duration-200"
-              style={{ 
-                color: 'rgb(30, 41, 59)',
-                fontSize: '15px',
-                fontWeight: '500',
-                lineHeight: '1.5'
+              placeholder="Type your question…"
+              radius="xl"
+              size={isMobile ? "sm" : "md"}
+              minRows={1}
+              maxRows={4}
+              autosize
+              style={{ flex: 1 }}
+              styles={{
+                input: {
+                  border: "2px solid #eceff1",
+                  transition: "border-color 0.2s, box-shadow .2s",
+                  fontSize: isMobile ? "14px" : "15px",
+                  background: "#fff",
+                  "&:focus": {
+                    borderColor: "var(--mantine-color-grape-5)",
+                    boxShadow: "0 0 0 3px rgba(131, 76, 255, 0.12)",
+                  },
+                },
               }}
             />
-            <div className="absolute bottom-2 right-3 text-xs text-gray-400 font-medium">
-              {input.length}/500
-            </div>
-          </div>
-          <Button
-            onClick={handleSendMessage}
-            disabled={!input.trim() || loading}
-            size="icon"
-            className="h-12 w-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/25 transition-all duration-200 disabled:opacity-50 disabled:shadow-none"
-          >
-            {loading ? (
-              <Loader2 className="animate-spin h-5 w-5 text-white" />
-            ) : (
-              <Send className="h-5 w-5 text-white" />
-            )}
-          </Button>
-        </div>
-        <div className="max-w-4xl mx-auto mt-3 text-center">
-          <p className="text-xs text-gray-500 font-medium">
-            Press <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-200 text-gray-600">Enter</kbd> to send • <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-200 text-gray-600">Shift + Enter</kbd> for new line
-          </p>
-        </div>
-      </footer>
+            <Button
+              size={isMobile ? "sm" : "md"}
+              radius="xl"
+              variant="filled"
+              color="grape"
+              onClick={handleSendMessage}
+              disabled={!input.trim() || loading}
+              style={{ flexShrink: 0, fontWeight: 700 }}
+            >
+              {loading ? "…" : "Ask"}
+            </Button>
+          </Group>
+        </Container>
+      </Paper>
+
+      {/* Minimal global styles for polish */}
+      <style jsx global>{`
+        .hover-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        @media (max-width: 768px) {
+          .hover-card:active {
+            transform: scale(0.98);
+          }
+        }
+      `}</style>
     </div>
   );
 }
