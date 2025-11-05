@@ -88,6 +88,9 @@ const LEARNING_PROMPTS = [
   },
 ];
 
+// simple sanitizer to remove asterisks from displayed text
+const sanitizeText = (s: string) => s.replace(/\*/g, "");
+
 export default function AppPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -162,7 +165,10 @@ export default function AppPage() {
       const json = await res.json();
       const reply = json.response || "No reply received.";
 
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: reply },
+      ]);
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
@@ -204,7 +210,7 @@ export default function AppPage() {
         flexDirection: "column",
       }}
     >
-      {/* Header (clean, minimal; no mode selector here) */}
+      {/* Header (logo now navigates home) */}
       <Paper
         shadow="xs"
         p={isMobile ? "sm" : "md"}
@@ -220,7 +226,12 @@ export default function AppPage() {
       >
         <Container size="lg" h="100%">
           <Group justify="space-between" align="center" h="100%" wrap="nowrap">
-            <Group gap="sm" wrap="nowrap">
+            <Group
+              gap="sm"
+              wrap="nowrap"
+              onClick={() => router.push("/")}
+              style={{ cursor: "pointer" }}
+            >
               <Image
                 src="/logo.png"
                 alt="Aidanna Logo"
@@ -310,18 +321,17 @@ export default function AppPage() {
         </Paper>
       )}
 
-      {/* Main area: fits within the viewport height without forcing desktop scroll */}
+      {/* Main area */}
       <div
         style={{
           flex: 1,
           minHeight: 0,
-          // Reserve space so content isn't hidden behind the fixed composer
           paddingBottom: COMPOSER_HEIGHT + 16,
         }}
       >
         <Container size="md" py={isMobile ? "md" : "lg"}>
           {messages.length === 0 ? (
-            // Welcome Screen (compact and above-the-fold on desktop)
+            // Welcome Screen
             <Stack
               align="center"
               gap={isMobile ? "md" : "lg"}
@@ -334,10 +344,10 @@ export default function AppPage() {
                 </Text>
               )}
               <Text
-                size={isMobile ? 26 : 32}
+                size="xl"
                 fw={700}
                 ta="center"
-                style={{ lineHeight: 1.15 }}
+                style={{ lineHeight: 1.15, fontSize: isMobile ? 26 : 32 }}
               >
                 What will you learn today?
               </Text>
@@ -385,7 +395,8 @@ export default function AppPage() {
                       withBorder
                       style={{
                         cursor: "pointer",
-                        transition: "transform .15s ease, box-shadow .15s ease",
+                        transition:
+                          "transform .15s ease, box-shadow .15s ease",
                       }}
                       onClick={() => handlePromptClick(prompt.text)}
                       className="hover-card"
@@ -443,17 +454,21 @@ export default function AppPage() {
                       style={{
                         maxWidth: isMobile ? "78%" : "72%",
                         background:
-                          m.role === "user" ? "var(--mantine-color-dark-7)" : "#ffffff",
+                          m.role === "user"
+                            ? "var(--mantine-color-dark-7)"
+                            : "#ffffff",
                         color: m.role === "user" ? "#ffffff" : "inherit",
                         borderColor:
-                          m.role === "user" ? "transparent" : "var(--mantine-color-gray-3)",
+                          m.role === "user"
+                            ? "transparent"
+                            : "var(--mantine-color-gray-3)",
                       }}
                     >
                       <Text
-                        size={isMobile ? "sm" : "sm"}
+                        size="sm"
                         style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
                       >
-                        {m.content}
+                        {sanitizeText(m.content)}
                       </Text>
                     </Paper>
 
@@ -489,7 +504,7 @@ export default function AppPage() {
                     <Paper shadow="xs" p={isMobile ? "xs" : "md"} radius="lg" withBorder>
                       <Group gap="xs">
                         <IconLoader2 size={isMobile ? 14 : 16} className="animate-spin" />
-                        <Text size={isMobile ? "sm" : "sm"} c="dimmed">
+                        <Text size="sm" c="dimmed">
                           Crafting your story...
                         </Text>
                       </Group>
