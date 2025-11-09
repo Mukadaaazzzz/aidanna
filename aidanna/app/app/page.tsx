@@ -17,12 +17,14 @@ import {
   Menu,
   rem,
   Box,
-  SegmentedControl,
   SimpleGrid,
   Divider,
   Loader,
+  ScrollArea,
+  Drawer,
+  Burger,
 } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { useMediaQuery, useDisclosure } from "@mantine/hooks";
 import {
   IconBook,
   IconUsers,
@@ -32,63 +34,38 @@ import {
   IconFlask,
   IconBriefcase,
   IconCpu,
-  IconMicrophone,
-  IconPlayerStop,
-  IconVolume,
+  IconPlus,
+  IconMessage,
+  IconTrash,
+  IconMenu2,
 } from "@tabler/icons-react";
 
 type Message = {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant";
   content: string;
-  audio?: string;
-  messageId?: string;
+  messageId: string;
+};
+
+type Conversation = {
+  id: string;
+  title: string;
+  mode: string;
+  created_at: string;
 };
 
 type StoryMode = "narrative" | "dialogue";
 
 const API_BASE = "https://aidanna-backend.vercel.app/api";
 
-const DEFAULT_MODES: Record<
-  StoryMode,
-  { icon: any; label: string; color: string }
-> = {
-  narrative: {
-    icon: IconBook,
-    label: "Narrative",
-    color: "grape",
-  },
-  dialogue: {
-    icon: IconUsers,
-    label: "Dialogue",
-    color: "cyan",
-  },
+const DEFAULT_MODES: Record<StoryMode, { icon: any; label: string; color: string }> = {
+  narrative: { icon: IconBook, label: "Narrative", color: "grape" },
+  dialogue: { icon: IconUsers, label: "Dialogue", color: "cyan" },
 };
 
 const LEARNING_PROMPTS = [
-  {
-    icon: IconFlask,
-    text: "Explain photosynthesis through a story",
-    category: "Science",
-  },
-  {
-    icon: IconBriefcase,
-    text: "Teach me about supply and demand",
-    category: "Business",
-  },
-  {
-    icon: IconCpu,
-    text: "How does machine learning work?",
-    category: "Technology",
-  },
-];
-
-const VOICE_OPTIONS = [
-  { id: 'alloy', name: 'Alloy', description: 'Balanced and clear' },
-  { id: 'echo', name: 'Echo', description: 'Warm and resonant' },
-  { id: 'fable', name: 'Fable', description: 'Storytelling tone' },
-  { id: 'onyx', name: 'Onyx', description: 'Deep and authoritative' },
-  { id: 'nova', name: 'Nova', description: 'Bright and cheerful' },
-  { id: 'shimmer', name: 'Shimmer', description: 'Soft and calming' },
+  { icon: IconFlask, text: "Explain photosynthesis through a story", category: "Science" },
+  { icon: IconBriefcase, text: "Teach me about supply and demand", category: "Business" },
+  { icon: IconCpu, text: "How does machine learning work?", category: "Technology" },
 ];
 
 const sanitizeText = (s: string) => s.replace(/\*/g, "");
@@ -100,31 +77,29 @@ export default function AppPage() {
   const [selectedMode, setSelectedMode] = useState<StoryMode>("narrative");
   const [user, setUser] = useState<any>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isListening, setIsListening] = useState(false);
-  const [isPlaying, setIsPlaying] = useState<string | null>(null);
-  const [selectedVoice, setSelectedVoice] = useState('alloy');
-  const [voiceMode, setVoiceMode] = useState(false);
+  const [conversationId, setConversationId] = useState<string>("new");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [usage, setUsage] = useState({ used: 0, remaining: 10, total: 10 });
+  const [usageLoaded, setUsageLoaded] = useState(false);
+  const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const recognitionRef = useRef<any>(null);
   const supabase = createClientComponentClient();
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  const HEADER_HEIGHT = isMobile ? 64 : 72;
-  const MODEBAR_HEIGHT = messages.length > 0 ? (isMobile ? 52 : 56) : 0;
-  const VOICE_TOGGLE_HEIGHT = 48; // Always show voice toggle
-  const COMPOSER_HEIGHT = isMobile ? 76 : 88;
+  const HEADER_HEIGHT = 60;
+  const COMPOSER_HEIGHT = 80;
+  const SIDEBAR_WIDTH = 260;
 
   useEffect(() => {
     let isMounted = true;
 
     const init = async () => {
-      const {
-        data: { user: gotUser },
-      } = await supabase.auth.getUser();
+      const { data: { user: gotUser } } = await supabase.auth.getUser();
       if (!isMounted) return;
 
       if (!gotUser) {
@@ -133,221 +108,219 @@ export default function AppPage() {
       }
       setUser(gotUser);
       setIsLoadingUser(false);
+      
+      // Load conversations and usage
+      await Promise.all([
+        loadConversations(gotUser.id),
+        loadCurrentUsage(gotUser.id)
+      ]);
+
+      // Restore last conversation from localStorage
+      const lastConvId = localStorage.getItem('lastConversationId');
+      if (lastConvId && lastConvId !== 'new') {
+        loadConversationMessages(lastConvId, false);
+      }
     };
 
     init();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [router, supabase.auth]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Cleanup audio on unmount
   useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
-    };
-  }, []);
+    if (isMobile) setSidebarOpen(false);
+  }, [isMobile]);
 
-  const startListening = () => {
-    if (!('webkitSpeechRecognition' in window)) {
-      alert('Speech recognition not supported in this browser. Please use Chrome.');
-      return;
+  // Save current conversation to localStorage
+  useEffect(() => {
+    if (conversationId) {
+      localStorage.setItem('lastConversationId', conversationId);
     }
+  }, [conversationId]);
 
-    const recognition = new (window as any).webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    
-    let finalTranscript = '';
-    
-    recognition.onstart = () => {
-      console.log('Speech recognition started');
-      setIsListening(true);
-      setInput('Listening...');
-    };
-    
-    recognition.onresult = (event: any) => {
-      let interimTranscript = '';
-      
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        } else {
-          interimTranscript += transcript;
-        }
+  const loadCurrentUsage = async (userId: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('user_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('date', today)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Failed to load usage:', error);
+        return;
       }
-      
-      setInput(finalTranscript || interimTranscript);
-    };
 
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      
-      if (event.error === 'no-speech') {
-        setInput('');
-        console.log('No speech detected. Please try again.');
+      if (data) {
+        setUsage({
+          used: data.request_count,
+          remaining: 10 - data.request_count,
+          total: 10,
+        });
       }
-      
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      console.log('Speech recognition ended');
-      setIsListening(false);
-      
-      if (!finalTranscript) {
-        setInput('');
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      setUsageLoaded(true);
+    } catch (err) {
+      console.error('Failed to load usage:', err);
+      setUsageLoaded(true);
     }
   };
 
-  // Fixed playAudio function
-  const playAudio = (audioBase64: string, messageId: string) => {
-    console.log('playAudio called for message:', messageId);
-    console.log('Audio data length:', audioBase64?.length);
-    
-    // If currently playing this message, stop it
-    if (isPlaying === messageId) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      setIsPlaying(null);
-      return;
+  const loadConversations = async (userId: string) => {
+    setLoadingConversations(true);
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setConversations(data || []);
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+    } finally {
+      setLoadingConversations(false);
     }
+  };
+
+  const loadConversationMessages = async (convId: string, closeDrawerAfter = true) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', convId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedMessages: Message[] = (data || []).map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+        messageId: msg.id,
+      }));
+
+      setMessages(formattedMessages);
+      setConversationId(convId);
+      
+      const conv = conversations.find(c => c.id === convId);
+      if (conv) setSelectedMode(conv.mode as StoryMode);
+      
+      if (isMobile && closeDrawerAfter) closeDrawer();
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+    }
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setConversationId("new");
+    localStorage.setItem('lastConversationId', 'new');
+    if (isMobile) closeDrawer();
+  };
+
+  const handleDeleteConversation = async (convId: string) => {
+    if (!confirm('Delete this conversation?')) return;
 
     try {
-      // Stop any currently playing audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', convId);
+
+      if (error) throw error;
+
+      setConversations(prev => prev.filter(c => c.id !== convId));
+      if (conversationId === convId) {
+        handleNewChat();
       }
-
-      setIsPlaying(messageId);
-
-      // Convert base64 to blob
-      const binaryString = atob(audioBase64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      console.log('Created audio URL:', audioUrl);
-
-      // Create or reuse audio element
-      if (!audioRef.current) {
-        audioRef.current = new Audio();
-      }
-
-      audioRef.current.src = audioUrl;
-      
-      audioRef.current.onended = () => {
-        console.log('Audio playback finished');
-        setIsPlaying(null);
-        URL.revokeObjectURL(audioUrl);
-      };
-
-      audioRef.current.onerror = (error) => {
-        console.error('Audio playback error:', error);
-        setIsPlaying(null);
-        URL.revokeObjectURL(audioUrl);
-        alert('Failed to play audio. Please try again.');
-      };
-
-      // Play the audio
-      audioRef.current.play().then(() => {
-        console.log('Audio playing successfully');
-      }).catch((error) => {
-        console.error('Play failed:', error);
-        setIsPlaying(null);
-        URL.revokeObjectURL(audioUrl);
-        alert('Failed to play audio: ' + error.message);
-      });
-
-    } catch (error) {
-      console.error('Audio setup failed:', error);
-      setIsPlaying(null);
-      alert('Failed to setup audio: ' + (error as Error).message);
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !user) return;
 
-    const userMsg: Message = { 
-      role: "user", 
+    const userMsg: Message = {
+      role: "user",
       content: input.trim(),
-      messageId: Date.now().toString() + '-user'
+      messageId: Date.now().toString() + "-user",
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
     try {
-      console.log('Sending request with voice mode:', voiceMode, 'voice:', selectedVoice);
-      
       const res = await fetch(`${API_BASE}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: userMsg.content,
           mode: selectedMode,
-          voiceResponse: voiceMode,
-          voice: selectedVoice,
+          userId: user.id,
+          conversationId: conversationId,
         }),
       });
 
+      const json = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(
-          errorData.error || `Request failed with status ${res.status}`
-        );
+        if (res.status === 429) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: `⚠️ ${json.error}`,
+              messageId: Date.now().toString() + "-limit",
+            },
+          ]);
+          if (json.usage) {
+            setUsage({
+              used: json.usage.requests_used,
+              remaining: json.usage.requests_remaining,
+              total: json.usage.daily_limit,
+            });
+          }
+          setLoading(false);
+          return;
+        }
+        throw new Error(json.error || "Request failed");
       }
 
-      const json = await res.json();
-      console.log('Backend response:', json);
-      console.log('Has audio:', !!json.audio);
-      console.log('Audio length:', json.audio?.length);
+      if (conversationId === "new" && json.conversation_id) {
+        setConversationId(json.conversation_id);
+        localStorage.setItem('lastConversationId', json.conversation_id);
+        loadConversations(user.id);
+      }
 
-      const messageId = Date.now().toString() + '-assistant';
-      const assistantMsg: Message = { 
-        role: "assistant", 
+      if (json.usage) {
+        setUsage({
+          used: json.usage.requests_used,
+          remaining: json.usage.requests_remaining,
+          total: json.usage.daily_limit,
+        });
+      }
+
+      const assistantMsg: Message = {
+        role: "assistant",
         content: json.response || "No reply received.",
-        audio: json.audio,
-        messageId: messageId
+        messageId: Date.now().toString() + "-assistant",
       };
 
-      console.log('Setting assistant message with audio:', !!assistantMsg.audio);
       setMessages((prev) => [...prev, assistantMsg]);
-      
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "⚠️ I'm having trouble connecting right now. Please try again shortly.",
-          messageId: Date.now().toString() + '-error'
+          content: "⚠️ Something went wrong. Please try again.",
+          messageId: Date.now().toString() + "-error",
         },
       ]);
       console.error("API Error:", err);
@@ -364,6 +337,7 @@ export default function AppPage() {
   };
 
   const handleSignOut = async () => {
+    localStorage.removeItem('lastConversationId');
     await supabase.auth.signOut();
     router.push("/");
   };
@@ -373,228 +347,241 @@ export default function AppPage() {
     textareaRef.current?.focus();
   };
 
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#fafafa",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* Header */}
-      <Paper
-        shadow="xs"
-        p={isMobile ? "sm" : "md"}
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          borderBottom: "1px solid #e9ecef",
-          background: "rgba(255, 255, 255, 0.9)",
-          backdropFilter: "blur(10px)",
-          height: HEADER_HEIGHT,
-        }}
-      >
-        <Container size="lg" h="100%">
-          <Group justify="space-between" align="center" h="100%" wrap="nowrap">
-            <Group
-              gap="sm"
-              wrap="nowrap"
-              onClick={() => router.push("/")}
-              style={{ cursor: "pointer" }}
-            >
-              <Image
-                src="/logo.png"
-                alt="Aidanna Logo"
-                width={isMobile ? 28 : 34}
-                height={isMobile ? 28 : 34}
-                style={{ borderRadius: 8 }}
-              />
-              <Text fw={700} size={isMobile ? "lg" : "xl"}>
-                Aidanna
-              </Text>
-            </Group>
+  if (isLoadingUser) {
+    return (
+      <div style={{ 
+        minHeight: "100vh", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #faf5ff 0%, #fff 100%)"
+      }}>
+        <Stack align="center" gap="md">
+          <Loader size="lg" color="grape" />
+          <Text size="sm" c="dimmed">Loading Aidanna...</Text>
+        </Stack>
+      </div>
+    );
+  }
 
-            <Menu shadow="md" width={220}>
-              <Menu.Target>
-                <ActionIcon variant="subtle" size="lg" radius="md">
-                  <Avatar
-                    size={isMobile ? "sm" : "md"}
-                    radius="md"
-                    variant="gradient"
-                    gradient={{ from: "grape", to: "violet", deg: 45 }}
-                  >
-                    {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
-                  </Avatar>
-                </ActionIcon>
-              </Menu.Target>
-              <Menu.Dropdown>
-                {user && (
-                  <>
-                    <Menu.Label>
-                      {user?.user_metadata?.name || "User"}
-                    </Menu.Label>
-                    <Menu.Divider />
-                  </>
-                )}
-                <Menu.Item
-                  leftSection={
-                    <IconSettings style={{ width: rem(14), height: rem(14) }} />
-                  }
-                >
-                  Settings
-                </Menu.Item>
-                <Menu.Item
-                  color="red"
-                  leftSection={
-                    <IconLogout style={{ width: rem(14), height: rem(14) }} />
-                  }
-                  onClick={handleSignOut}
-                >
-                  Sign out
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+  const SidebarContent = () => (
+    <>
+      <Box p="sm">
+        <Button
+          fullWidth
+          leftSection={<IconPlus size={16} />}
+          variant="gradient"
+          gradient={{ from: "grape", to: "violet", deg: 45 }}
+          onClick={handleNewChat}
+          size="sm"
+        >
+          New Chat
+        </Button>
+      </Box>
+
+      <Divider />
+
+      <ScrollArea style={{ flex: 1 }} p="xs">
+        {loadingConversations ? (
+          <Group justify="center" p="md">
+            <Loader size="sm" />
           </Group>
-        </Container>
-      </Paper>
+        ) : conversations.length === 0 ? (
+          <Text size="xs" c="dimmed" ta="center" p="md">
+            No conversations yet
+          </Text>
+        ) : (
+          <Stack gap={4}>
+            {conversations.map((conv) => (
+              <div
+                key={conv.id}
+                onClick={() => loadConversationMessages(conv.id)}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  background: conversationId === conv.id ? "#f3e8ff" : "transparent",
+                  border: conversationId === conv.id ? "1px solid #9333ea" : "1px solid transparent",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                className="conv-item"
+              >
+                <Group justify="space-between" wrap="nowrap">
+                  <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                    <IconMessage size={14} color="#868e96" style={{ flexShrink: 0 }} />
+                    <Text size="xs" truncate style={{ flex: 1 }}>
+                      {conv.title}
+                    </Text>
+                  </Group>
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteConversation(conv.id);
+                    }}
+                  >
+                    <IconTrash size={12} />
+                  </ActionIcon>
+                </Group>
+              </div>
+            ))}
+          </Stack>
+        )}
+      </ScrollArea>
 
-      {/* Mode Bar */}
-      {messages.length > 0 && (
+      <Divider />
+
+      <Box p="sm">
+        <Group gap="xs" wrap="nowrap">
+          <Avatar size="sm" radius="md" color="grape">
+            {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
+          </Avatar>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Text size="xs" fw={500} truncate>
+              {user?.user_metadata?.name || user?.email}
+            </Text>
+            {usageLoaded && (
+              <Text size="xs" c="dimmed">
+                {usage.remaining}/{usage.total} left today
+              </Text>
+            )}
+          </div>
+          <Menu shadow="md" width={180}>
+            <Menu.Target>
+              <ActionIcon variant="subtle" size="sm">
+                <IconSettings size={14} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item leftSection={<IconSettings style={{ width: rem(12) }} />} style={{ fontSize: 13 }}>
+                Settings
+              </Menu.Item>
+              <Menu.Item
+                color="red"
+                leftSection={<IconLogout style={{ width: rem(12) }} />}
+                onClick={handleSignOut}
+                style={{ fontSize: 13 }}
+              >
+                Sign out
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        </Group>
+      </Box>
+    </>
+  );
+
+  return (
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      {/* Sidebar - Desktop Only */}
+      {!isMobile && sidebarOpen && (
         <Paper
-          p={isMobile ? 8 : 10}
-          withBorder
           style={{
-            position: "sticky",
-            top: HEADER_HEIGHT,
-            zIndex: 90,
-            background: "#fff",
-            height: MODEBAR_HEIGHT,
+            width: SIDEBAR_WIDTH,
+            height: "100vh",
+            borderRight: "1px solid #e9ecef",
+            display: "flex",
+            flexDirection: "column",
+            background: "#fafafa",
           }}
         >
-          <Container size="md">
-            <Group justify="space-between" wrap="nowrap">
-              <Text size="sm" c="dimmed">
-                Choose a learning mode
-              </Text>
-              <SegmentedControl
-                value={selectedMode}
-                onChange={(value) => setSelectedMode(value as StoryMode)}
-                data={Object.entries(DEFAULT_MODES).map(([key, mode]) => ({
-                  value: key,
-                  label: mode.label,
-                }))}
-                size="xs"
-                radius="xl"
-              />
-            </Group>
-          </Container>
+          <SidebarContent />
         </Paper>
       )}
 
-      {/* Voice Mode Toggle - ALWAYS VISIBLE */}
-      <Paper
-        p={isMobile ? 8 : 10}
-        withBorder
-        style={{
-          position: "sticky",
-          top: HEADER_HEIGHT + MODEBAR_HEIGHT,
-          zIndex: 85,
-          background: "#fff",
-          borderTop: "1px solid #e9ecef",
-          height: VOICE_TOGGLE_HEIGHT,
-        }}
-      >
-        <Container size="md">
-          <Group justify="space-between" align="center">
-            <Text size="sm" c="dimmed">
-              Voice mode
-            </Text>
-            <Group gap="xs">
-              <Button
-                size="xs"
-                variant={voiceMode ? "filled" : "outline"}
-                color="blue"
-                onClick={() => setVoiceMode(!voiceMode)}
-              >
-                {voiceMode ? "🔊 Voice On" : "🔇 Voice Off"}
-              </Button>
-              {voiceMode && (
-                <Menu shadow="md" width={200}>
-                  <Menu.Target>
-                    <Button size="xs" variant="light">
-                      {VOICE_OPTIONS.find(v => v.id === selectedVoice)?.name}
-                    </Button>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    {VOICE_OPTIONS.map((voice) => (
-                      <Menu.Item
-                        key={voice.id}
-                        onClick={() => setSelectedVoice(voice.id)}
-                      >
-                        <Stack gap={2}>
-                          <Text size="sm">{voice.name}</Text>
-                          <Text size="xs" c="dimmed">
-                            {voice.description}
-                          </Text>
-                        </Stack>
-                      </Menu.Item>
-                    ))}
-                  </Menu.Dropdown>
-                </Menu>
-              )}
-            </Group>
+      {/* Mobile Drawer */}
+      <Drawer
+        opened={drawerOpened}
+        onClose={closeDrawer}
+        size={280}
+        padding="md"
+        title={
+          <Group gap="xs">
+            <Image src="/logo.png" alt="Aidanna" width={24} height={24} style={{ borderRadius: 6 }} />
+            <Text fw={700}>Aidanna</Text>
           </Group>
-        </Container>
-      </Paper>
-
-      {/* Main area */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          paddingBottom: COMPOSER_HEIGHT + 16,
+        }
+        styles={{
+          content: { display: "flex", flexDirection: "column" },
+          body: { flex: 1, display: "flex", flexDirection: "column", padding: 0 }
         }}
       >
-        <Container size="md" py={isMobile ? "md" : "lg"}>
-          {messages.length === 0 ? (
-            // Welcome Screen
-            <Stack
-              align="center"
-              gap={isMobile ? "md" : "lg"}
-              mt={isMobile ? 24 : 32}
-              px={isMobile ? "md" : 0}
-            >
-              {!isLoadingUser && user && (
-                <Text size={isMobile ? "md" : "lg"} fw={500} c="dimmed">
-                  Hi {user?.user_metadata?.name}
-                </Text>
-              )}
-              <Text
-                size="xl"
-                fw={700}
-                ta="center"
-                style={{ lineHeight: 1.15, fontSize: isMobile ? 26 : 32 }}
-              >
-                What will you learn today?
-              </Text>
+        <SidebarContent />
+      </Drawer>
 
-              <Box w="100%">
-                <Text size="sm" c="dimmed" ta="center" mb="xs">
-                  Pick a mode to get started
+      {/* Main Area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh" }}>
+        {/* Header */}
+        <Paper
+          shadow="xs"
+          p="sm"
+          style={{
+            borderBottom: "1px solid #e9ecef",
+            background: "#fff",
+            height: HEADER_HEIGHT,
+          }}
+        >
+          <Container size="lg" h="100%">
+            <Group justify="space-between" align="center" h="100%" wrap="nowrap">
+              <Group gap="sm" wrap="nowrap">
+                {isMobile && (
+                  <Burger opened={drawerOpened} onClick={openDrawer} size="sm" />
+                )}
+                <Image src="/logo.png" alt="Aidanna" width={28} height={28} style={{ borderRadius: 6 }} />
+                <Text fw={700} size="lg">Aidanna</Text>
+              </Group>
+
+              <Menu shadow="md" width={200}>
+                <Menu.Target>
+                  <ActionIcon variant="subtle" size="lg">
+                    <Avatar size="sm" radius="md" color="grape">
+                      {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
+                    </Avatar>
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label style={{ fontSize: 12 }}>{user?.user_metadata?.name || user?.email}</Menu.Label>
+                  {usageLoaded && (
+                    <Menu.Label style={{ fontSize: 11 }} c="dimmed">{usage.remaining}/{usage.total} requests left</Menu.Label>
+                  )}
+                  <Menu.Divider />
+                  <Menu.Item leftSection={<IconSettings style={{ width: rem(14) }} />}>
+                    Settings
+                  </Menu.Item>
+                  <Menu.Item color="red" leftSection={<IconLogout style={{ width: rem(14) }} />} onClick={handleSignOut}>
+                    Sign out
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
+          </Container>
+        </Paper>
+
+        {/* Messages Area */}
+        <div style={{ flex: 1, overflowY: "auto", background: "#fafafa" }}>
+          <Container size="md" py={isMobile ? "xs" : "sm"}>
+            {messages.length === 0 ? (
+              <Stack align="center" gap={isMobile ? "sm" : "md"} mt={isMobile ? 8 : 16}>
+                <Text size={isMobile ? "sm" : "md"} c="dimmed">
+                  Hi {user?.user_metadata?.name?.split(' ')[0] || 'there'}
                 </Text>
-                <Group gap="xs" justify="center" wrap="wrap">
+                <Text size={isMobile ? "xl" : "2xl"} fw={700} ta="center">
+                  What will you learn today?
+                </Text>
+
+                <Group gap="xs" justify="center">
                   {Object.entries(DEFAULT_MODES).map(([key, mode]) => {
                     const Icon = mode.icon;
                     const isActive = selectedMode === key;
                     return (
                       <Button
                         key={key}
-                        size="sm"
+                        size="xs"
                         variant={isActive ? "filled" : "light"}
                         color={mode.color}
-                        leftSection={<Icon size={16} />}
+                        leftSection={<Icon size={14} />}
                         onClick={() => setSelectedMode(key as StoryMode)}
                         radius="xl"
                       >
@@ -603,129 +590,61 @@ export default function AppPage() {
                     );
                   })}
                 </Group>
-              </Box>
 
-              <Divider w="100%" variant="dashed" />
+                <Divider w="100%" my={isMobile ? "xs" : "sm"} />
 
-              <Text size="sm" c="dimmed" ta="center">
-                Try one of these to begin:
-              </Text>
-
-              <Box w="100%">
-                <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
-                  {LEARNING_PROMPTS.map((prompt, idx) => (
-                    <Card
-                      key={idx}
-                      shadow="xs"
-                      padding="lg"
-                      radius="md"
-                      withBorder
-                      style={{
-                        cursor: "pointer",
-                        transition:
-                          "transform .15s ease, box-shadow .15s ease",
-                      }}
-                      onClick={() => handlePromptClick(prompt.text)}
-                      className="hover-card"
-                    >
-                      <Stack gap="xs" align="flex-start">
-                        <prompt.icon size={20} color="#868e96" />
-                        <Text size="sm" c="dimmed" style={{ lineHeight: 1.5 }}>
-                          {prompt.text}
-                        </Text>
-                      </Stack>
-                    </Card>
-                  ))}
-                </SimpleGrid>
-              </Box>
-            </Stack>
-          ) : (
-            // Chat Messages
-            <div
-              style={{
-                height: `calc(100vh - ${HEADER_HEIGHT + MODEBAR_HEIGHT + VOICE_TOGGLE_HEIGHT + COMPOSER_HEIGHT + (isMobile ? 64 : 80)}px)`,
-                overflowY: "auto",
-                paddingRight: 2,
-              }}
-            >
-              <Stack gap={isMobile ? "sm" : "md"} mt="sm">
-                {messages.map((m, i) => (
-                  <Group
-                    key={m.messageId || i}
-                    align="flex-start"
-                    gap="md"
-                    justify={m.role === "user" ? "flex-end" : "flex-start"}
-                    wrap="nowrap"
-                  >
-                    {m.role === "assistant" && (
-                      <Avatar
-                        size={isMobile ? "sm" : "md"}
+                <Stack gap={isMobile ? "xs" : "sm"} w="100%">
+                  <Text size="xs" c="dimmed" ta="center">Try one of these:</Text>
+                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing={isMobile ? "xs" : "sm"}>
+                    {LEARNING_PROMPTS.map((prompt, idx) => (
+                      <Card
+                        key={idx}
+                        shadow="xs"
+                        padding={isMobile ? "sm" : "md"}
                         radius="md"
-                        style={{ flexShrink: 0 }}
+                        withBorder
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handlePromptClick(prompt.text)}
+                        className="hover-card"
                       >
-                        <Image
-                          src="/logo.png"
-                          alt="Aidanna"
-                          width={isMobile ? 24 : 28}
-                          height={isMobile ? 24 : 28}
-                          style={{ borderRadius: 6 }}
-                        />
+                        <Stack gap="xs">
+                          <prompt.icon size={18} color="#868e96" />
+                          <Text size="xs" c="dimmed" style={{ lineHeight: 1.4 }}>{prompt.text}</Text>
+                        </Stack>
+                      </Card>
+                    ))}
+                  </SimpleGrid>
+                </Stack>
+              </Stack>
+            ) : (
+              <Stack gap="md" mt="xs">
+                {messages.map((m) => (
+                  <Group key={m.messageId} align="flex-start" gap="sm" wrap="nowrap" justify={m.role === "user" ? "flex-end" : "flex-start"}>
+                    {m.role === "assistant" && (
+                      <Avatar size="sm" radius="md">
+                        <Image src="/logo.png" alt="Aidanna" width={22} height={22} style={{ borderRadius: 6 }} />
                       </Avatar>
                     )}
 
                     <Paper
                       shadow="xs"
-                      p={isMobile ? "xs" : "md"}
+                      p={isMobile ? "xs" : "sm"}
                       radius="lg"
                       withBorder
                       style={{
-                        maxWidth: isMobile ? "78%" : "72%",
-                        background:
-                          m.role === "user"
-                            ? "var(--mantine-color-dark-7)"
-                            : "#ffffff",
+                        maxWidth: isMobile ? "80%" : "75%",
+                        background: m.role === "user" ? "#2d2d2d" : "#ffffff",
                         color: m.role === "user" ? "#ffffff" : "inherit",
-                        borderColor:
-                          m.role === "user"
-                            ? "transparent"
-                            : "var(--mantine-color-gray-3)",
+                        borderColor: m.role === "user" ? "transparent" : "#e9ecef",
                       }}
                     >
-                      <Text
-                        size="sm"
-                        style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
-                      >
+                      <Text size="sm" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
                         {sanitizeText(m.content)}
                       </Text>
-                      
-                      {/* Audio Play Button */}
-                      {m.role === "assistant" && m.audio && (
-                        <Group mt="sm">
-                          <Button
-                            variant="light"
-                            color="blue"
-                            size="xs"
-                            onClick={() => playAudio(m.audio!, m.messageId!)}
-                            leftSection={
-                              isPlaying === m.messageId ? 
-                                <IconPlayerStop size={14} /> : 
-                                <IconVolume size={14} />
-                            }
-                          >
-                            {isPlaying === m.messageId ? "Stop" : "Listen"}
-                          </Button>
-                        </Group>
-                      )}
                     </Paper>
 
                     {m.role === "user" && (
-                      <Avatar
-                        size={isMobile ? "sm" : "md"}
-                        radius="md"
-                        variant="gradient"
-                        gradient={{ from: "grape", to: "violet", deg: 45 }}
-                        style={{ flexShrink: 0 }}
-                      >
+                      <Avatar size="sm" radius="md" color="grape">
                         {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
                       </Avatar>
                     )}
@@ -733,128 +652,85 @@ export default function AppPage() {
                 ))}
 
                 {loading && (
-                  <Group align="flex-start" gap="md" wrap="nowrap">
-                    <Avatar
-                      size={isMobile ? "sm" : "md"}
-                      radius="md"
-                      style={{ flexShrink: 0 }}
-                    >
-                      <Image
-                        src="/logo.png"
-                        alt="Aidanna"
-                        width={isMobile ? 24 : 28}
-                        height={isMobile ? 24 : 28}
-                        style={{ borderRadius: 6 }}
-                      />
+                  <Group align="flex-start" gap="sm">
+                    <Avatar size="sm" radius="md">
+                      <Image src="/logo.png" alt="Aidanna" width={22} height={22} style={{ borderRadius: 6 }} />
                     </Avatar>
-                    <Paper shadow="xs" p={isMobile ? "xs" : "md"} radius="lg" withBorder>
+                    <Paper shadow="xs" p="sm" radius="lg" withBorder>
                       <Group gap="xs">
-                        <IconLoader2 size={isMobile ? 14 : 16} className="animate-spin" />
-                        <Text size="sm" c="dimmed">
-                          Crafting your story...
-                        </Text>
+                        <IconLoader2 size={14} className="animate-spin" />
+                        <Text size="xs" c="dimmed">Crafting your story...</Text>
                       </Group>
                     </Paper>
                   </Group>
                 )}
                 <div ref={messagesEndRef} />
               </Stack>
-            </div>
-          )}
-        </Container>
+            )}
+          </Container>
+        </div>
+
+        {/* Composer */}
+        <Paper
+          shadow="lg"
+          p="sm"
+          style={{
+            borderTop: "1px solid #e9ecef",
+            background: "#fff",
+            height: COMPOSER_HEIGHT,
+          }}
+        >
+          <Container size="md" h="100%">
+            <Group align="flex-end" gap="xs" wrap="nowrap">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.currentTarget.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Type your question..."
+                radius="xl"
+                size="sm"
+                minRows={1}
+                maxRows={3}
+                autosize
+                style={{ flex: 1 }}
+                styles={{
+                  input: {
+                    border: "2px solid #eceff1",
+                    fontSize: "14px",
+                  },
+                }}
+              />
+              <Button
+                size="sm"
+                radius="xl"
+                variant="filled"
+                color="grape"
+                onClick={handleSendMessage}
+                disabled={!input.trim() || loading}
+                style={{ fontWeight: 700 }}
+              >
+                {loading ? <IconLoader2 size={16} className="animate-spin" /> : "Ask"}
+              </Button>
+            </Group>
+          </Container>
+        </Paper>
       </div>
-
-      {/* Composer */}
-      <Paper
-        shadow="xl"
-        p={isMobile ? "sm" : "md"}
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          borderTop: "1px solid #e9ecef",
-          background: "rgba(255, 255, 255, 0.98)",
-          backdropFilter: "blur(10px)",
-          height: COMPOSER_HEIGHT,
-        }}
-      >
-        <Container size="md" h="100%">
-          <Group align="flex-end" gap={isMobile ? "xs" : "md"} wrap="nowrap">
-            <ActionIcon
-              size={isMobile ? "md" : "lg"}
-              variant={isListening ? "filled" : "light"}
-              color={isListening ? "red" : "blue"}
-              onClick={isListening ? stopListening : startListening}
-              radius="xl"
-            >
-              {isListening ? <IconPlayerStop size={16} /> : <IconMicrophone size={16} />}
-            </ActionIcon>
-
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.currentTarget.value)}
-              onKeyDown={handleKeyPress}
-              placeholder={isListening ? "Listening..." : "Type your question or speak..."}
-              radius="xl"
-              size={isMobile ? "sm" : "md"}
-              minRows={1}
-              maxRows={4}
-              autosize
-              style={{ flex: 1 }}
-              disabled={isListening}
-              styles={{
-                input: {
-                  border: "2px solid #eceff1",
-                  transition: "border-color 0.2s, box-shadow .2s",
-                  fontSize: isMobile ? "14px" : "15px",
-                  background: "#fff",
-                  "&:focus": {
-                    borderColor: "var(--mantine-color-grape-5)",
-                    boxShadow: "0 0 0 3px rgba(131, 76, 255, 0.12)",
-                  },
-                  "&:disabled": {
-                    backgroundColor: "#f8f9fa",
-                  },
-                },
-              }}
-            />
-            <Button
-              size={isMobile ? "sm" : "md"}
-              radius="xl"
-              variant="filled"
-              color="grape"
-              onClick={handleSendMessage}
-              disabled={!input.trim() || loading || isListening}
-              style={{ flexShrink: 0, fontWeight: 700 }}
-            >
-              {loading ? <IconLoader2 size={16} className="animate-spin" /> : "Ask"}
-            </Button>
-          </Group>
-        </Container>
-      </Paper>
 
       <style jsx global>{`
         .hover-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .conv-item:hover {
+          background: #f8f9fa !important;
         }
         @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         .animate-spin {
           animation: spin 1s linear infinite;
-        }
-        @media (max-width: 768px) {
-          .hover-card:active {
-            transform: scale(0.98);
-          }
         }
       `}</style>
     </div>

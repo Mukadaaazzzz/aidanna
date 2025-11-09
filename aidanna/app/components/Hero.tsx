@@ -13,15 +13,7 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-white px-4 py-16 text-center text-gray-900 sm:px-6 lg:px-8">
-      {/* Static background */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute -left-40 top-0 h-96 w-96 rounded-full bg-purple-300/30 blur-3xl" />
-        <div className="absolute -right-40 top-1/4 h-[500px] w-[500px] rounded-full bg-pink-300/30 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-orange-300/25 blur-3xl" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#8b5cf608_1px,transparent_1px),linear-gradient(to_bottom,#8b5cf608_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-      </div>
-
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 px-4 py-16 text-center text-gray-900 sm:px-6 lg:px-8">
       {/* Mobile: Floating portraits */}
       <div className="absolute inset-0 sm:hidden">
         {people.slice(0, 4).map((p, i) => {
@@ -37,19 +29,20 @@ export default function Hero() {
           return (
             <div
               key={i}
-              className={`absolute ${mobilePositions[i]} ${mobileSizes[i]} aspect-[3/4] overflow-hidden rounded-2xl border-2 border-white/50 shadow-lg bg-white/80`}
+              className={`absolute ${mobilePositions[i]} ${mobileSizes[i]} aspect-[3/4] overflow-hidden rounded-2xl border-2 border-white/50 shadow-lg bg-purple-100`}
               style={{ transform: `rotate(${mobileRotations[i]})` }}
             >
               <Image
                 src={p.src}
                 alt={p.alt}
                 fill
-                sizes="128px"
+                sizes="144px"
                 className="object-cover"
-                priority={i < 2}
-                quality={75}
+                priority
+                quality={90}
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q=="
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 via-transparent to-transparent" />
             </div>
           );
         })}
@@ -69,7 +62,7 @@ export default function Hero() {
           return (
             <div
               key={i}
-              className={`absolute ${positions[i]} aspect-[3/4] w-24 overflow-hidden rounded-xl border-2 border-white/50 shadow-lg bg-white/80 md:w-28 lg:w-32 xl:w-36`}
+              className={`absolute ${positions[i]} aspect-[3/4] w-24 overflow-hidden rounded-xl border-2 border-white/50 shadow-lg bg-purple-100 md:w-28 lg:w-32 xl:w-36`}
               style={{ transform: `rotate(${rotations[i]})` }}
             >
               <Image
@@ -78,10 +71,11 @@ export default function Hero() {
                 fill
                 sizes="(max-width: 768px) 96px, (max-width: 1024px) 112px, (max-width: 1280px) 128px, 144px"
                 className="object-cover"
-                priority={i < 2}
-                quality={75}
+                priority
+                quality={90}
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q=="
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-purple-500/15 via-transparent to-transparent" />
             </div>
           );
         })}
