@@ -6,10 +6,10 @@ import { ArrowRight } from "lucide-react";
 
 // Static imports for instant loading (Next.js auto-optimizes these at build time)
 // Use relative paths from your components folder
-import person1 from "@/public/people/person1.jpg";
-import person2 from "@/public/people/person2.jpg";
-import person3 from "@/public/people/person3.jpg";
-import person4 from "@/public/people/person4.jpg";
+import person1 from "@/public/people/person1.webp";
+import person2 from "@/public/people/person2.webp";
+import person3 from "@/public/people/person3.webp";
+import person4 from "@/public/people/person4.webp";
 
 export default function Hero() {
   const people = [
@@ -20,7 +20,7 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 px-4 py-16 text-center text-gray-900 sm:px-6 lg:px-8">
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-16 text-center text-gray-900 sm:px-6 lg:px-8">
       {/* Mobile: Floating portraits */}
       <div className="absolute inset-0 sm:hidden">
         {people.slice(0, 4).map((p, i) => {
