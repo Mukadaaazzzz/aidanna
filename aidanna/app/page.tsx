@@ -14,7 +14,7 @@ import Footer from "./components/Footer";
 
 export default function Page() {
 return (
-<div className="min-h-dvh bg-gradient-to-b from-neutral-950 via-neutral-950 to-black text-white selection:bg-fuchsia-500/30 selection:text-fuchsia-100">
+<div className="min-h-dvh text-white selection:bg-fuchsia-500/30 selection:text-fuchsia-100">
 <Header />
 <main>
 <Hero />
