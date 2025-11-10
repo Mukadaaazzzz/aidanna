@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${poppins.className} bg-neutral-950`}>
+    <html lang="en" className={`${poppins.className}`}>
       <body className="min-h-dvh text-white antialiased overflow-x-clip">
        <MantineProvider>{children}</MantineProvider>
       </body>

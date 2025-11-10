@@ -5,10 +5,11 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 
 // Static imports for instant loading (Next.js auto-optimizes these at build time)
-import person1 from "/public/people/person1.jpg";
-import person2 from "/public/people/person2.jpg";
-import person3 from "/public/people/person3.jpg";
-import person4 from "/public/people/person4.jpg";
+// Use relative paths from your components folder
+import person1 from "@/public/people/person1.jpg";
+import person2 from "@/public/people/person2.jpg";
+import person3 from "@/public/people/person3.jpg";
+import person4 from "@/public/people/person4.jpg";
 
 export default function Hero() {
   const people = [
