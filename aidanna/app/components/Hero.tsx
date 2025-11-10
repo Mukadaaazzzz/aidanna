@@ -4,12 +4,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 
+// Static imports for instant loading (Next.js auto-optimizes these at build time)
+import person1 from "/public/people/person1.jpg";
+import person2 from "/public/people/person2.jpg";
+import person3 from "/public/people/person3.jpg";
+import person4 from "/public/people/person4.jpg";
+
 export default function Hero() {
   const people = [
-    { src: "/people/person1.jpg", alt: "Smiling learner" },
-    { src: "/people/person2.jpg", alt: "Focused student" },
-    { src: "/people/person3.jpg", alt: "Joyful reader" },
-    { src: "/people/person4.jpg", alt: "Creative thinker" },
+    { src: person1, alt: "Smiling learner" },
+    { src: person2, alt: "Focused student" },
+    { src: person3, alt: "Joyful reader" },
+    { src: person4, alt: "Creative thinker" },
   ];
 
   return (
@@ -29,7 +35,7 @@ export default function Hero() {
           return (
             <div
               key={i}
-              className={`absolute ${mobilePositions[i]} ${mobileSizes[i]} aspect-[3/4] overflow-hidden rounded-2xl border-2 border-white/50 shadow-lg bg-purple-100`}
+              className={`absolute ${mobilePositions[i]} ${mobileSizes[i]} aspect-[3/4] overflow-hidden rounded-2xl border-2 border-white/50 shadow-lg bg-gradient-to-br from-purple-100 to-pink-100`}
               style={{ transform: `rotate(${mobileRotations[i]})` }}
             >
               <Image
@@ -39,9 +45,8 @@ export default function Hero() {
                 sizes="144px"
                 className="object-cover"
                 priority
-                quality={90}
+                quality={75}
                 placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q=="
               />
             </div>
           );
@@ -62,7 +67,7 @@ export default function Hero() {
           return (
             <div
               key={i}
-              className={`absolute ${positions[i]} aspect-[3/4] w-24 overflow-hidden rounded-xl border-2 border-white/50 shadow-lg bg-purple-100 md:w-28 lg:w-32 xl:w-36`}
+              className={`absolute ${positions[i]} aspect-[3/4] w-24 overflow-hidden rounded-xl border-2 border-white/50 shadow-lg bg-gradient-to-br from-purple-100 to-pink-100 md:w-28 lg:w-32 xl:w-36`}
               style={{ transform: `rotate(${rotations[i]})` }}
             >
               <Image
@@ -72,9 +77,8 @@ export default function Hero() {
                 sizes="(max-width: 768px) 96px, (max-width: 1024px) 112px, (max-width: 1280px) 128px, 144px"
                 className="object-cover"
                 priority
-                quality={90}
+                quality={75}
                 placeholder="blur"
-                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q=="
               />
             </div>
           );
@@ -96,6 +100,7 @@ export default function Hero() {
               viewBox="0 0 200 8"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
             >
               <path
                 d="M2 5C40 2 80 3 100 4C120 5 160 6 198 4"
