@@ -272,11 +272,16 @@ export default function AppPage() {
 
       if (!res.ok) {
         if (res.status === 429) {
+          // Daily limit reached - show upgrade message
+          const upgradeMessage = json.upgrade_required 
+            ? `⚠️ ${json.error}\n\n[Upgrade to Premium](/upgrade) for unlimited requests and priority access!`
+            : `⚠️ ${json.error}`;
+            
           setMessages((prev) => [
             ...prev,
             {
               role: "assistant",
-              content: `⚠️ ${json.error}`,
+              content: upgradeMessage,
               messageId: Date.now().toString() + "-limit",
             },
           ]);
@@ -290,6 +295,21 @@ export default function AppPage() {
           setLoading(false);
           return;
         }
+        
+        if (res.status === 503) {
+          // Rate limit / server busy
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: `⚠️ ${json.error}\n\nPlease wait a moment and try again.`,
+              messageId: Date.now().toString() + "-busy",
+            },
+          ]);
+          setLoading(false);
+          return;
+        }
+        
         throw new Error(json.error || "Request failed");
       }
 
@@ -659,7 +679,7 @@ export default function AppPage() {
                     <Paper shadow="xs" p="sm" radius="lg" withBorder>
                       <Group gap="xs">
                         <IconLoader2 size={14} className="animate-spin" />
-                        <Text size="xs" c="dimmed">Crafting your story...</Text>
+                        <Text size="xs" c="dimmed">Thinking...</Text>
                       </Group>
                     </Paper>
                   </Group>
@@ -687,7 +707,7 @@ export default function AppPage() {
                 value={input}
                 onChange={(e) => setInput(e.currentTarget.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Type your question..."
+                placeholder="Say hi, ask a question, or request a story…"
                 radius="xl"
                 size="sm"
                 minRows={1}

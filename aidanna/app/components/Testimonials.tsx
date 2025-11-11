@@ -2,8 +2,8 @@ import React from "react";
 
 export default function Testimonials() {
   const quotes = [
-    { name: "Aisha", role: "Medical student", quote: "I finished a week of cardiology in two evenings. Comedy Mode kept me going—who knew EKGs could be funny?" },
-    { name: "Diego", role: "Data analyst", quote: "Mindmaps + Challenges = chef's kiss. I actually *want* to revise now." },
+    { name: "Sailat", role: "Medical student", quote: "I finished a week of cardiology in two evenings. Dialogue Mode kept me going—who knew EKGs could be so interesting?" },
+    { name: "Diego", role: "Data analyst", quote: "I never knew something technical can be explained in form of a story, This is incredible!" },
     { name: "Lina", role: "Teacher", quote: "Story Mode turned dry history into bingeable episodes. My class is hooked." },
   ];
 

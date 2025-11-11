@@ -11,9 +11,9 @@ export default function Pricing() {
       icon: BookOpen,
       popular: false,
       features: [
-        "3 stories per month",
-        "Basic narrative mode", 
-        "PDF upload (up to 5 pages)",
+        "10 stories daily",
+        "Basic Narrative mode", 
+        "Basic Dialogue mode",
         "Standard support"
       ],
       cta: "Start Free",
@@ -27,14 +27,14 @@ export default function Pricing() {
       popular: true,
       features: [
         "Unlimited stories",
-        "All story modes (Narrative, Dialogue, Case Study)",
-        "Large PDF processing", 
-        "Interactive scenarios",
+        "Advanced story modes (Narrative, Dialogues)",
+        "Pdf files support", 
+        "Voice mode",
         "Progress analytics",
         "Priority support"
       ],
-      cta: "Go Pro",
-      href: "/signup?plan=pro"
+      cta: "Coming soon",
+      href: "/"
     },
     {
       name: "Team",
@@ -51,8 +51,8 @@ export default function Pricing() {
         "Custom templates",
         "Dedicated support"
       ],
-      cta: "Contact Sales", 
-      href: "/contact"
+      cta: "Coming soon", 
+      href: "/"
     }
   ];
 

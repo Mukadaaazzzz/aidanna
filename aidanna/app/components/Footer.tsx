@@ -11,9 +11,8 @@ export default function Footer() {
 
   const socialLinks = [
     { icon: Twitter, href: "https://twitter.com/aidanna", label: "Twitter" },
-    { icon: Linkedin, href: "https://github.com/aidanna", label: "Linkedin" },
-    { icon: MessageSquare, href: "https://discord.gg/aidanna", label: "Discord" },
-    { icon: Mail, href: "mailto:hello@aidanna.com", label: "Email" },
+    { icon: Linkedin, href: "https://linkedin.com/in/aidanna", label: "Linkedin" },
+    { icon: Mail, href: "mailto:mukadaz@aidanna.com", label: "Email" },
   ];
 
   return (

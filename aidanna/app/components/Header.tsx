@@ -16,7 +16,6 @@ export default function Header() {
   const [open, setOpen] = useState(false);
 
   const nav = [
-    { href: "/case-studies", label: "Case-studies", icon: FileText },
     { href: "/blog", label: "Blog", icon: FileText },
     { href: "#pricing", label: "Pricing", icon: Users },
   ];
