@@ -23,6 +23,7 @@ import {
   ScrollArea,
   Drawer,
   Burger,
+  Tooltip,
 } from "@mantine/core";
 import { useMediaQuery, useDisclosure } from "@mantine/hooks";
 import {
@@ -37,7 +38,6 @@ import {
   IconPlus,
   IconMessage,
   IconTrash,
-  IconMenu2,
 } from "@tabler/icons-react";
 
 type Message = {
@@ -83,7 +83,8 @@ export default function AppPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [usage, setUsage] = useState({ used: 0, remaining: 10, total: 10 });
   const [usageLoaded, setUsageLoaded] = useState(false);
-  const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
+  const [drawerOpened, { open: openDrawer, close: closeDrawer, toggle: toggleDrawer }] = useDisclosure(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -94,6 +95,13 @@ export default function AppPage() {
   const HEADER_HEIGHT = 60;
   const COMPOSER_HEIGHT = 80;
   const SIDEBAR_WIDTH = 260;
+
+  const LANGUAGES = [
+    { value: "english", label: "English", flag: "🇬🇧" },
+    { value: "hausa", label: "Hausa", flag: "🇳🇬" },
+    { value: "igbo", label: "Igbo", flag: "🇳🇬" },
+    { value: "yoruba", label: "Yoruba", flag: "🇳🇬" },
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -108,7 +116,7 @@ export default function AppPage() {
       }
       setUser(gotUser);
       setIsLoadingUser(false);
-      
+
       // Load conversations and usage
       await Promise.all([
         loadConversations(gotUser.id),
@@ -207,10 +215,10 @@ export default function AppPage() {
 
       setMessages(formattedMessages);
       setConversationId(convId);
-      
+
       const conv = conversations.find(c => c.id === convId);
       if (conv) setSelectedMode(conv.mode as StoryMode);
-      
+
       if (isMobile && closeDrawerAfter) closeDrawer();
     } catch (err) {
       console.error('Failed to load messages:', err);
@@ -265,6 +273,7 @@ export default function AppPage() {
           mode: selectedMode,
           userId: user.id,
           conversationId: conversationId,
+          language: selectedLanguage,
         }),
       });
 
@@ -273,10 +282,10 @@ export default function AppPage() {
       if (!res.ok) {
         if (res.status === 429) {
           // Daily limit reached - show upgrade message
-          const upgradeMessage = json.upgrade_required 
+          const upgradeMessage = json.upgrade_required
             ? `⚠️ ${json.error}\n\n[Upgrade to Premium](/upgrade) for unlimited requests and priority access!`
             : `⚠️ ${json.error}`;
-            
+
           setMessages((prev) => [
             ...prev,
             {
@@ -295,7 +304,7 @@ export default function AppPage() {
           setLoading(false);
           return;
         }
-        
+
         if (res.status === 503) {
           // Rate limit / server busy
           setMessages((prev) => [
@@ -309,7 +318,7 @@ export default function AppPage() {
           setLoading(false);
           return;
         }
-        
+
         throw new Error(json.error || "Request failed");
       }
 
@@ -320,11 +329,20 @@ export default function AppPage() {
       }
 
       if (json.usage) {
-        setUsage({
-          used: json.usage.requests_used,
-          remaining: json.usage.requests_remaining,
-          total: json.usage.daily_limit,
-        });
+        // Handle paid users (unlimited)
+        if (json.usage.requests_remaining === -1) {
+          setUsage({
+            used: 0,
+            remaining: -1,
+            total: -1,
+          });
+        } else {
+          setUsage({
+            used: json.usage.requests_used,
+            remaining: json.usage.requests_remaining,
+            total: json.usage.daily_limit,
+          });
+        }
       }
 
       const assistantMsg: Message = {
@@ -367,12 +385,22 @@ export default function AppPage() {
     textareaRef.current?.focus();
   };
 
+  const goHome = () => router.push("/");
+  const goUpgrade = () => router.push("/upgrade");
+
+  const onBrandKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      goHome();
+    }
+  };
+
   if (isLoadingUser) {
     return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
         justifyContent: "center",
         background: "linear-gradient(135deg, #faf5ff 0%, #fff 100%)"
       }}>
@@ -394,9 +422,35 @@ export default function AppPage() {
           gradient={{ from: "grape", to: "violet", deg: 45 }}
           onClick={handleNewChat}
           size="sm"
+          aria-label="Start a new chat"
         >
           New Chat
         </Button>
+
+        {/* Language Selector */}
+        <Box mt="sm">
+          <Text size="xs" c="dimmed" mb={4}>Language</Text>
+          <select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              borderRadius: "0.5rem",
+              border: "1px solid #e5e7eb",
+              fontSize: "0.875rem",
+              cursor: "pointer",
+              background: "#fff",
+            }}
+            aria-label="Choose language"
+          >
+            {LANGUAGES.map((lang) => (
+              <option key={lang.value} value={lang.value}>
+                {lang.flag} {lang.label}
+              </option>
+            ))}
+          </select>
+        </Box>
       </Box>
 
       <Divider />
@@ -425,6 +479,9 @@ export default function AppPage() {
                   transition: "all 0.2s",
                 }}
                 className="conv-item"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === "Enter" && loadConversationMessages(conv.id)}
               >
                 <Group justify="space-between" wrap="nowrap">
                   <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
@@ -433,17 +490,20 @@ export default function AppPage() {
                       {conv.title}
                     </Text>
                   </Group>
-                  <ActionIcon
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteConversation(conv.id);
-                    }}
-                  >
-                    <IconTrash size={12} />
-                  </ActionIcon>
+                  <Tooltip label="Delete conversation" withArrow>
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="red"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteConversation(conv.id);
+                      }}
+                      aria-label="Delete conversation"
+                    >
+                      <IconTrash size={12} />
+                    </ActionIcon>
+                  </Tooltip>
                 </Group>
               </div>
             ))}
@@ -459,24 +519,30 @@ export default function AppPage() {
             {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
           </Avatar>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Text size="xs" fw={500} truncate>
+            <Text size="xs" fw={500} truncate title={user?.user_metadata?.name || user?.email}>
               {user?.user_metadata?.name || user?.email}
             </Text>
             {usageLoaded && (
               <Text size="xs" c="dimmed">
-                {usage.remaining}/{usage.total} left today
+                {usage.remaining === -1 ? 'Unlimited ✨' : `${usage.remaining}/${usage.total} left today`}
               </Text>
             )}
           </div>
+
+          {/* SETTINGS MENU (Sidebar) — Added Upgrade before Sign out */}
           <Menu shadow="md" width={180}>
             <Menu.Target>
-              <ActionIcon variant="subtle" size="sm">
+              <ActionIcon variant="subtle" size="sm" aria-label="Settings">
                 <IconSettings size={14} />
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item leftSection={<IconSettings style={{ width: rem(12) }} />} style={{ fontSize: 13 }}>
-                Settings
+              <Menu.Item
+                leftSection={<IconPlus style={{ width: rem(12) }} />}
+                onClick={goUpgrade}
+                style={{ fontSize: 13, fontWeight: 600 }}
+              >
+                Upgrade
               </Menu.Item>
               <Menu.Item
                 color="red"
@@ -518,7 +584,16 @@ export default function AppPage() {
         size={280}
         padding="md"
         title={
-          <Group gap="xs">
+          // CLICKABLE brand in drawer title -> goes home and closes drawer
+          <Group
+            gap="xs"
+            onClick={() => { closeDrawer(); goHome(); }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); closeDrawer(); goHome(); } }}
+            style={{ cursor: "pointer" }}
+            role="button"
+            tabIndex={0}
+            aria-label="Go to home"
+          >
             <Image src="/logo.png" alt="Aidanna" width={24} height={24} style={{ borderRadius: 6 }} />
             <Text fw={700}>Aidanna</Text>
           </Group>
@@ -547,15 +622,43 @@ export default function AppPage() {
             <Group justify="space-between" align="center" h="100%" wrap="nowrap">
               <Group gap="sm" wrap="nowrap">
                 {isMobile && (
-                  <Burger opened={drawerOpened} onClick={openDrawer} size="sm" />
+                  <Burger
+                    opened={drawerOpened}
+                    onClick={toggleDrawer}
+                    size="sm"
+                    aria-label={drawerOpened ? "Close menu" : "Open menu"}
+                  />
                 )}
-                <Image src="/logo.png" alt="Aidanna" width={28} height={28} style={{ borderRadius: 6 }} />
-                <Text fw={700} size="lg">Aidanna</Text>
+
+                {/* CLICKABLE brand in header -> goes to / */}
+                <Image
+                  src="/logo.png"
+                  alt="Aidanna"
+                  width={28}
+                  height={28}
+                  onClick={goHome}
+                  onKeyDown={onBrandKeyDown}
+                  style={{ borderRadius: 6, cursor: "pointer" }}
+                  aria-label="Go to home"
+                />
+                <Text
+                  fw={700}
+                  size="lg"
+                  onClick={goHome}
+                  onKeyDown={onBrandKeyDown}
+                  role="button"
+                  tabIndex={0}
+                  title="Go to Home"
+                  style={{ cursor: "pointer" }}
+                >
+                  Aidanna
+                </Text>
               </Group>
 
+              {/* Avatar Menu (Top-right) — Added Upgrade before Sign out */}
               <Menu shadow="md" width={200}>
                 <Menu.Target>
-                  <ActionIcon variant="subtle" size="lg">
+                  <ActionIcon variant="subtle" size="lg" aria-label="Account menu">
                     <Avatar size="sm" radius="md" color="grape">
                       {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
                     </Avatar>
@@ -564,13 +667,38 @@ export default function AppPage() {
                 <Menu.Dropdown>
                   <Menu.Label style={{ fontSize: 12 }}>{user?.user_metadata?.name || user?.email}</Menu.Label>
                   {usageLoaded && (
-                    <Menu.Label style={{ fontSize: 11 }} c="dimmed">{usage.remaining}/{usage.total} requests left</Menu.Label>
+                    <Menu.Label style={{ fontSize: 11 }} c="dimmed">
+                      {usage.remaining === -1 ? 'Premium - Unlimited ✨' : `${usage.remaining}/${usage.total} requests left`}
+                    </Menu.Label>
                   )}
                   <Menu.Divider />
-                  <Menu.Item leftSection={<IconSettings style={{ width: rem(14) }} />}>
-                    Settings
+                  <Menu.Label style={{ fontSize: 11 }}>Language</Menu.Label>
+                  {LANGUAGES.map((lang) => (
+                    <Menu.Item
+                      key={lang.value}
+                      onClick={() => setSelectedLanguage(lang.value)}
+                      style={{
+                        fontSize: 12,
+                        background: selectedLanguage === lang.value ? "#f3e8ff" : "transparent"
+                      }}
+                    >
+                      {lang.flag} {lang.label}
+                    </Menu.Item>
+                  ))}
+                  <Menu.Divider />
+
+                  <Menu.Item
+                    leftSection={<IconPlus style={{ width: rem(14) }} />}
+                    onClick={goUpgrade}
+                  >
+                    Upgrade
                   </Menu.Item>
-                  <Menu.Item color="red" leftSection={<IconLogout style={{ width: rem(14) }} />} onClick={handleSignOut}>
+
+                  <Menu.Item
+                    color="red"
+                    leftSection={<IconLogout style={{ width: rem(14) }} />}
+                    onClick={handleSignOut}
+                  >
                     Sign out
                   </Menu.Item>
                 </Menu.Dropdown>
@@ -604,6 +732,8 @@ export default function AppPage() {
                         leftSection={<Icon size={14} />}
                         onClick={() => setSelectedMode(key as StoryMode)}
                         radius="xl"
+                        aria-pressed={isActive}
+                        aria-label={`Select ${mode.label} mode`}
                       >
                         {mode.label}
                       </Button>
@@ -626,6 +756,11 @@ export default function AppPage() {
                         style={{ cursor: "pointer" }}
                         onClick={() => handlePromptClick(prompt.text)}
                         className="hover-card"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === "Enter" && handlePromptClick(prompt.text)}
+                        aria-label={`Use prompt: ${prompt.text}`}
+                        title={prompt.text}
                       >
                         <Stack gap="xs">
                           <prompt.icon size={18} color="#868e96" />
@@ -659,7 +794,26 @@ export default function AppPage() {
                       }}
                     >
                       <Text size="sm" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                        {sanitizeText(m.content)}
+                        {sanitizeText(m.content).split(/(\[.+?\]\(.+?\)\))/g).map((part, i) => {
+                          // Handle markdown links like [Upgrade to Premium](/upgrade)
+                          const linkMatch = part.match(/^\[(.+?)\]\((.+?)\)$/);
+                          if (linkMatch) {
+                            return (
+                              <a
+                                key={i}
+                                href={linkMatch[2]}
+                                style={{
+                                  color: m.role === "user" ? "#fff" : "#9333ea",
+                                  textDecoration: "underline",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {linkMatch[1]}
+                              </a>
+                            );
+                          }
+                          return <span key={i}>{part}</span>;
+                        })}
                       </Text>
                     </Paper>
 
@@ -679,7 +833,7 @@ export default function AppPage() {
                     <Paper shadow="xs" p="sm" radius="lg" withBorder>
                       <Group gap="xs">
                         <IconLoader2 size={14} className="animate-spin" />
-                        <Text size="xs" c="dimmed">Thinking...</Text>
+                        <Text size="xs" c="dimmed">Crafting your story...</Text>
                       </Group>
                     </Paper>
                   </Group>
@@ -707,7 +861,7 @@ export default function AppPage() {
                 value={input}
                 onChange={(e) => setInput(e.currentTarget.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Say hi, ask a question, or request a story…"
+                placeholder="Say Hi, ask a question or request a story ..."
                 radius="xl"
                 size="sm"
                 minRows={1}
@@ -720,6 +874,7 @@ export default function AppPage() {
                     fontSize: "14px",
                   },
                 }}
+                aria-label="Message input"
               />
               <Button
                 size="sm"
@@ -729,6 +884,7 @@ export default function AppPage() {
                 onClick={handleSendMessage}
                 disabled={!input.trim() || loading}
                 style={{ fontWeight: 700 }}
+                aria-label="Send message"
               >
                 {loading ? <IconLoader2 size={16} className="animate-spin" /> : "Ask"}
               </Button>
@@ -751,6 +907,12 @@ export default function AppPage() {
         }
         .animate-spin {
           animation: spin 1s linear infinite;
+        }
+        /* Focus ring for clickable brand elements */
+        [role="button"]:focus {
+          outline: 3px solid #c4b5fd;
+          outline-offset: 2px;
+          border-radius: 8px;
         }
       `}</style>
     </div>

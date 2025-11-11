@@ -6,7 +6,7 @@ export default function Pricing() {
   const tiers = [
     {
       name: "Starter",
-      price: "$0",
+      price: "₦2,500",
       description: "Perfect for trying storytelling",
       icon: BookOpen,
       popular: false,
@@ -14,6 +14,7 @@ export default function Pricing() {
         "10 stories daily",
         "Basic Narrative mode", 
         "Basic Dialogue mode",
+        "Multilingual (Yoruba, Hausa & Igbo)",
         "Standard support"
       ],
       cta: "Start Free",
@@ -22,19 +23,19 @@ export default function Pricing() {
     {
       name: "Pro Learner",
       price: "$29",
-      description: "For certification students & professionals",
+      description: "For students & professionals",
       icon: Zap,
       popular: true,
       features: [
         "Unlimited stories",
         "Advanced story modes (Narrative, Dialogues)",
-        "Pdf files support", 
+        "Pdf files support",
         "Voice mode",
-        "Progress analytics",
+        "Save & Export stories",
         "Priority support"
       ],
-      cta: "Coming soon",
-      href: "/"
+      cta: "Go Pro",
+      href: "/upgrade"
     },
     {
       name: "Team",
