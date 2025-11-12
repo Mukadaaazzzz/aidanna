@@ -190,10 +190,12 @@ export default function UpgradePage() {
 
               <Stack gap={8}>
                 <Feature>Unlimited stories daily</Feature>
-                <Feature>Priority generation speed</Feature>
-                <Feature>All 4 languages</Feature>
+                <Feature>Advanced story modes</Feature>
+                <Feature>Multilingual (Yoruba, Hausa & Igbo)</Feature>
+                <Feature>PDF files support</Feature>
                 <Feature>Save & export stories</Feature>
-                <Feature>Cancel anytime</Feature>
+                <Feature>Voice mode</Feature>
+                <Feature>Priority support</Feature>
               </Stack>
 
               <Button

@@ -24,6 +24,7 @@ import {
   Drawer,
   Burger,
   Tooltip,
+  Badge,
 } from "@mantine/core";
 import { useMediaQuery, useDisclosure } from "@mantine/hooks";
 import {
@@ -38,6 +39,8 @@ import {
   IconPlus,
   IconMessage,
   IconTrash,
+  IconCrown,
+  IconSparkles,
 } from "@tabler/icons-react";
 
 type Message = {
@@ -54,6 +57,11 @@ type Conversation = {
 };
 
 type StoryMode = "narrative" | "dialogue";
+
+type UserProfile = {
+  subscription_tier: 'free' | 'pro';
+  subscription_status?: string;
+};
 
 const API_BASE = "https://aidanna-backend.vercel.app/api";
 
@@ -76,6 +84,7 @@ export default function AppPage() {
   const [loading, setLoading] = useState(false);
   const [selectedMode, setSelectedMode] = useState<StoryMode>("narrative");
   const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile>({ subscription_tier: 'free' });
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [conversationId, setConversationId] = useState<string>("new");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -103,6 +112,8 @@ export default function AppPage() {
     { value: "yoruba", label: "Yoruba", flag: "🇳🇬" },
   ];
 
+  const isPro = userProfile.subscription_tier === 'pro';
+
   useEffect(() => {
     let isMounted = true;
 
@@ -115,6 +126,10 @@ export default function AppPage() {
         return;
       }
       setUser(gotUser);
+
+      // Load user profile with subscription tier
+      await loadUserProfile(gotUser.id);
+
       setIsLoadingUser(false);
 
       // Load conversations and usage
@@ -148,6 +163,30 @@ export default function AppPage() {
       localStorage.setItem('lastConversationId', conversationId);
     }
   }, [conversationId]);
+
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_tier, subscription_status')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Failed to load profile:', error);
+        return;
+      }
+
+      if (data) {
+        setUserProfile({
+          subscription_tier: data.subscription_tier || 'free',
+          subscription_status: data.subscription_status
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load user profile:', err);
+    }
+  };
 
   const loadCurrentUsage = async (userId: string) => {
     try {
@@ -519,17 +558,37 @@ export default function AppPage() {
             {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
           </Avatar>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Text size="xs" fw={500} truncate title={user?.user_metadata?.name || user?.email}>
-              {user?.user_metadata?.name || user?.email}
-            </Text>
+            <Group gap={4} wrap="nowrap">
+              <Text size="xs" fw={500} truncate title={user?.user_metadata?.name || user?.email}>
+                {user?.user_metadata?.name || user?.email}
+              </Text>
+              {isPro && (
+                <Badge
+                  size="xs"
+                  variant="gradient"
+                  gradient={{ from: "yellow", to: "orange", deg: 45 }}
+                  leftSection={<IconCrown size={10} />}
+                  style={{ paddingLeft: 4 }}
+                >
+                  PRO
+                </Badge>
+              )}
+            </Group>
             {usageLoaded && (
               <Text size="xs" c="dimmed">
-                {usage.remaining === -1 ? 'Unlimited ✨' : `${usage.remaining}/${usage.total} left today`}
+                {isPro ? (
+                  <Group gap={4}>
+                    <IconSparkles size={12} />
+                    <span>Unlimited</span>
+                  </Group>
+                ) : (
+                  `${usage.remaining}/${usage.total} left today`
+                )}
               </Text>
             )}
           </div>
 
-          {/* SETTINGS MENU (Sidebar) — Added Upgrade before Sign out */}
+          {/* SETTINGS MENU (Sidebar) */}
           <Menu shadow="md" width={180}>
             <Menu.Target>
               <ActionIcon variant="subtle" size="sm" aria-label="Settings">
@@ -537,13 +596,15 @@ export default function AppPage() {
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item
-                leftSection={<IconPlus style={{ width: rem(12) }} />}
-                onClick={goUpgrade}
-                style={{ fontSize: 13, fontWeight: 600 }}
-              >
-                Upgrade
-              </Menu.Item>
+              {!isPro && (
+                <Menu.Item
+                  leftSection={<IconCrown style={{ width: rem(12) }} />}
+                  onClick={goUpgrade}
+                  style={{ fontSize: 13, fontWeight: 600, color: '#ca8a04' }}
+                >
+                  Upgrade to Pro
+                </Menu.Item>
+              )}
               <Menu.Item
                 color="red"
                 leftSection={<IconLogout style={{ width: rem(12) }} />}
@@ -641,22 +702,34 @@ export default function AppPage() {
                   style={{ borderRadius: 6, cursor: "pointer" }}
                   aria-label="Go to home"
                 />
-                <Text
-                  fw={700}
-                  size="lg"
-                  onClick={goHome}
-                  onKeyDown={onBrandKeyDown}
-                  role="button"
-                  tabIndex={0}
-                  title="Go to Home"
-                  style={{ cursor: "pointer" }}
-                >
-                  Aidanna
-                </Text>
+                <Group gap={8}>
+                  <Text
+                    fw={700}
+                    size="lg"
+                    onClick={goHome}
+                    onKeyDown={onBrandKeyDown}
+                    role="button"
+                    tabIndex={0}
+                    title="Go to Home"
+                    style={{ cursor: "pointer" }}
+                  >
+                    Aidanna
+                  </Text>
+                  {isPro && (
+                    <Badge
+                      size="sm"
+                      variant="gradient"
+                      gradient={{ from: "yellow", to: "orange", deg: 45 }}
+                      leftSection={<IconCrown size={12} />}
+                    >
+                      PRO
+                    </Badge>
+                  )}
+                </Group>
               </Group>
 
-              {/* Avatar Menu (Top-right) — Added Upgrade before Sign out */}
-              <Menu shadow="md" width={200}>
+              {/* Avatar Menu (Top-right) */}
+              <Menu shadow="md" width={220}>
                 <Menu.Target>
                   <ActionIcon variant="subtle" size="lg" aria-label="Account menu">
                     <Avatar size="sm" radius="md" color="grape">
@@ -665,10 +738,31 @@ export default function AppPage() {
                   </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
-                  <Menu.Label style={{ fontSize: 12 }}>{user?.user_metadata?.name || user?.email}</Menu.Label>
+                  <Menu.Label style={{ fontSize: 12 }}>
+                    <Group gap={6}>
+                      <span>{user?.user_metadata?.name || user?.email}</span>
+                      {isPro && (
+                        <Badge
+                          size="xs"
+                          variant="gradient"
+                          gradient={{ from: "yellow", to: "orange", deg: 45 }}
+                          leftSection={<IconCrown size={10} />}
+                        >
+                          PRO
+                        </Badge>
+                      )}
+                    </Group>
+                  </Menu.Label>
                   {usageLoaded && (
                     <Menu.Label style={{ fontSize: 11 }} c="dimmed">
-                      {usage.remaining === -1 ? 'Premium - Unlimited ✨' : `${usage.remaining}/${usage.total} requests left`}
+                      {isPro ? (
+                        <Group gap={4}>
+                          <IconSparkles size={12} />
+                          <span>Unlimited requests</span>
+                        </Group>
+                      ) : (
+                        `${usage.remaining}/${usage.total} requests left`
+                      )}
                     </Menu.Label>
                   )}
                   <Menu.Divider />
@@ -687,12 +781,15 @@ export default function AppPage() {
                   ))}
                   <Menu.Divider />
 
-                  <Menu.Item
-                    leftSection={<IconPlus style={{ width: rem(14) }} />}
-                    onClick={goUpgrade}
-                  >
-                    Upgrade
-                  </Menu.Item>
+                  {!isPro && (
+                    <Menu.Item
+                      leftSection={<IconCrown style={{ width: rem(14) }} />}
+                      onClick={goUpgrade}
+                      style={{ color: '#ca8a04', fontWeight: 600 }}
+                    >
+                      Upgrade to Pro
+                    </Menu.Item>
+                  )}
 
                   <Menu.Item
                     color="red"
@@ -714,6 +811,7 @@ export default function AppPage() {
               <Stack align="center" gap={isMobile ? "sm" : "md"} mt={isMobile ? 8 : 16}>
                 <Text size={isMobile ? "sm" : "md"} c="dimmed">
                   Hi {user?.user_metadata?.name?.split(' ')[0] || 'there'}
+                  {isPro && ' ✨'}
                 </Text>
                 <Text size={isMobile ? "xl" : "2xl"} fw={700} ta="center">
                   What will you learn today?

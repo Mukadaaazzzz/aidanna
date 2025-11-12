@@ -72,7 +72,7 @@ export default function BlogPost() {
                       Why Stories Make Learning 10x More Effective
                   </h1>
                   <p style={{ color: "#6b7280", fontSize: "1.125rem" }}>
-                      By Aidanna Team · November 10, 2024 · 8 min read
+                      By Aidanna Team · November 10, 2025 · 8 min read
                   </p>
               </div>
 
