@@ -29,7 +29,7 @@ export default function Pricing() {
       features: [
         "Unlimited stories",
         "Advanced story modes (Narrative, Dialogues)",
-        "Multilingual (Yoruba, Hausa & Igbo)",
+        "Advanced Multilingual (Standard)",
         "Pdf files support",
         "Priority support"
       ],
