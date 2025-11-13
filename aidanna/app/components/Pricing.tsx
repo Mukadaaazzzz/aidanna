@@ -14,7 +14,7 @@ export default function Pricing() {
         "10 stories daily",
         "Basic Narrative mode", 
         "Basic Dialogue mode",
-        "Multilingual (Yoruba, Hausa & Igbo)",
+        "Basic Multilingual (Experimental)",
         "Standard support"
       ],
       cta: "Start Free",
