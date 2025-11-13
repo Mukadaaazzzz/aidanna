@@ -41,6 +41,10 @@ import {
   IconTrash,
   IconCrown,
   IconSparkles,
+  IconPaperclip,
+  IconCopy,
+  IconFileText,
+  IconX,
 } from "@tabler/icons-react";
 
 type Message = {
@@ -59,13 +63,18 @@ type Conversation = {
 type StoryMode = "narrative" | "dialogue";
 
 type UserProfile = {
-  subscription_tier: 'free' | 'pro';
+  subscription_tier: "free" | "pro";
   subscription_status?: string;
 };
 
-const API_BASE = "https://aidanna-backend.vercel.app/api";
+// Get Supabase URL from environment or use your project URL
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://sblbfcrqdkussamkkhrk.supabase.co";
+const API_BASE = `${SUPABASE_URL}/functions/v1`;
 
-const DEFAULT_MODES: Record<StoryMode, { icon: any; label: string; color: string }> = {
+const DEFAULT_MODES: Record<
+  StoryMode,
+  { icon: any; label: string; color: string }
+> = {
   narrative: { icon: IconBook, label: "Narrative", color: "grape" },
   dialogue: { icon: IconUsers, label: "Dialogue", color: "cyan" },
 };
@@ -84,7 +93,9 @@ export default function AppPage() {
   const [loading, setLoading] = useState(false);
   const [selectedMode, setSelectedMode] = useState<StoryMode>("narrative");
   const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile>({ subscription_tier: 'free' });
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    subscription_tier: "free",
+  });
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [conversationId, setConversationId] = useState<string>("new");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -92,17 +103,20 @@ export default function AppPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [usage, setUsage] = useState({ used: 0, remaining: 10, total: 10 });
   const [usageLoaded, setUsageLoaded] = useState(false);
-  const [drawerOpened, { open: openDrawer, close: closeDrawer, toggle: toggleDrawer }] = useDisclosure(false);
+  const [drawerOpened, { open: openDrawer, close: closeDrawer, toggle: toggleDrawer }] =
+    useDisclosure(false);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const supabase = createClientComponentClient();
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const HEADER_HEIGHT = 60;
-  const COMPOSER_HEIGHT = 80;
+  const COMPOSER_HEIGHT = 110;
   const SIDEBAR_WIDTH = 260;
 
   const LANGUAGES = [
@@ -112,13 +126,15 @@ export default function AppPage() {
     { value: "yoruba", label: "Yoruba", flag: "🇳🇬" },
   ];
 
-  const isPro = userProfile.subscription_tier === 'pro';
+  const isPro = userProfile.subscription_tier === "pro";
 
   useEffect(() => {
     let isMounted = true;
 
     const init = async () => {
-      const { data: { user: gotUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: gotUser },
+      } = await supabase.auth.getUser();
       if (!isMounted) return;
 
       if (!gotUser) {
@@ -135,18 +151,20 @@ export default function AppPage() {
       // Load conversations and usage
       await Promise.all([
         loadConversations(gotUser.id),
-        loadCurrentUsage(gotUser.id)
+        loadCurrentUsage(gotUser.id),
       ]);
 
       // Restore last conversation from localStorage
-      const lastConvId = localStorage.getItem('lastConversationId');
-      if (lastConvId && lastConvId !== 'new') {
+      const lastConvId = localStorage.getItem("lastConversationId");
+      if (lastConvId && lastConvId !== "new") {
         loadConversationMessages(lastConvId, false);
       }
     };
 
     init();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [router, supabase.auth]);
 
   useEffect(() => {
@@ -160,46 +178,46 @@ export default function AppPage() {
   // Save current conversation to localStorage
   useEffect(() => {
     if (conversationId) {
-      localStorage.setItem('lastConversationId', conversationId);
+      localStorage.setItem("lastConversationId", conversationId);
     }
   }, [conversationId]);
 
   const loadUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('subscription_tier, subscription_status')
-        .eq('id', userId)
+        .from("profiles")
+        .select("subscription_tier, subscription_status")
+        .eq("id", userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Failed to load profile:', error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Failed to load profile:", error);
         return;
       }
 
       if (data) {
         setUserProfile({
-          subscription_tier: data.subscription_tier || 'free',
-          subscription_status: data.subscription_status
+          subscription_tier: data.subscription_tier || "free",
+          subscription_status: data.subscription_status,
         });
       }
     } catch (err) {
-      console.error('Failed to load user profile:', err);
+      console.error("Failed to load user profile:", err);
     }
   };
 
   const loadCurrentUsage = async (userId: string) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
-        .from('user_usage')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('date', today)
+        .from("user_usage")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", today)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Failed to load usage:', error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Failed to load usage:", error);
         return;
       }
 
@@ -212,7 +230,7 @@ export default function AppPage() {
       }
       setUsageLoaded(true);
     } catch (err) {
-      console.error('Failed to load usage:', err);
+      console.error("Failed to load usage:", err);
       setUsageLoaded(true);
     }
   };
@@ -221,28 +239,31 @@ export default function AppPage() {
     setLoadingConversations(true);
     try {
       const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
+        .from("conversations")
+        .select("*")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
         .limit(20);
 
       if (error) throw error;
       setConversations(data || []);
     } catch (err) {
-      console.error('Failed to load conversations:', err);
+      console.error("Failed to load conversations:", err);
     } finally {
       setLoadingConversations(false);
     }
   };
 
-  const loadConversationMessages = async (convId: string, closeDrawerAfter = true) => {
+  const loadConversationMessages = async (
+    convId: string,
+    closeDrawerAfter = true
+  ) => {
     try {
       const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', convId)
-        .order('created_at', { ascending: true });
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", convId)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
 
@@ -254,40 +275,51 @@ export default function AppPage() {
 
       setMessages(formattedMessages);
       setConversationId(convId);
+      setAttachedFiles([]);
 
-      const conv = conversations.find(c => c.id === convId);
+      const conv = conversations.find((c) => c.id === convId);
       if (conv) setSelectedMode(conv.mode as StoryMode);
 
       if (isMobile && closeDrawerAfter) closeDrawer();
     } catch (err) {
-      console.error('Failed to load messages:', err);
+      console.error("Failed to load messages:", err);
     }
   };
 
   const handleNewChat = () => {
     setMessages([]);
     setConversationId("new");
-    localStorage.setItem('lastConversationId', 'new');
+    setAttachedFiles([]);
+    localStorage.setItem("lastConversationId", "new");
     if (isMobile) closeDrawer();
   };
 
   const handleDeleteConversation = async (convId: string) => {
-    if (!confirm('Delete this conversation?')) return;
+    if (!confirm("Delete this conversation?")) return;
 
     try {
       const { error } = await supabase
-        .from('conversations')
+        .from("conversations")
         .delete()
-        .eq('id', convId);
+        .eq("id", convId);
 
       if (error) throw error;
 
-      setConversations(prev => prev.filter(c => c.id !== convId));
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
       if (conversationId === convId) {
         handleNewChat();
       }
     } catch (err) {
-      console.error('Failed to delete conversation:', err);
+      console.error("Failed to delete conversation:", err);
+    }
+  };
+
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(sanitizeText(text));
+      // You could integrate Mantine notifications here if desired
+    } catch (err) {
+      console.error("Failed to copy text:", err);
     }
   };
 
@@ -304,15 +336,60 @@ export default function AppPage() {
     setLoading(true);
 
     try {
+      // Get auth session for Supabase function calls
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("No active session. Please sign in again.");
+      }
+
+      let filesPayload: any[] = [];
+
+      if (isPro && attachedFiles.length > 0) {
+        const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+        const allowedExt = ["pdf", "txt", "doc", "docx"];
+
+        for (const file of attachedFiles) {
+          const ext = file.name.split(".").pop()?.toLowerCase();
+          if (!ext || !allowedExt.includes(ext)) {
+            alert(
+              `File "${file.name}" is not supported. Allowed: PDF, TXT, DOC, DOCX.`
+            );
+            setLoading(false);
+            return;
+          }
+          if (file.size > MAX_FILE_SIZE_BYTES) {
+            alert(
+              `File "${file.name}" is larger than 10MB. Please upload a smaller file.`
+            );
+            setLoading(false);
+            return;
+          }
+        }
+
+        filesPayload = await Promise.all(
+          attachedFiles.map(async (file) => ({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            text: await file.text(),
+          }))
+        );
+      }
+
       const res = await fetch(`${API_BASE}/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           prompt: userMsg.content,
           mode: selectedMode,
           userId: user.id,
           conversationId: conversationId,
           language: selectedLanguage,
+          files: isPro ? filesPayload : [],
         }),
       });
 
@@ -322,7 +399,7 @@ export default function AppPage() {
         if (res.status === 429) {
           // Daily limit reached - show upgrade message
           const upgradeMessage = json.upgrade_required
-            ? `⚠️ ${json.error}\n\n[Upgrade to Premium](/upgrade) for unlimited requests and priority access!`
+            ? `⚠️ ${json.error}\n\n[Upgrade to Premium] for unlimited requests and priority access!`
             : `⚠️ ${json.error}`;
 
           setMessages((prev) => [
@@ -363,7 +440,7 @@ export default function AppPage() {
 
       if (conversationId === "new" && json.conversation_id) {
         setConversationId(json.conversation_id);
-        localStorage.setItem('lastConversationId', json.conversation_id);
+        localStorage.setItem("lastConversationId", json.conversation_id);
         loadConversations(user.id);
       }
 
@@ -391,16 +468,18 @@ export default function AppPage() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
+      // Clear attachments after a successful send
+      setAttachedFiles([]);
     } catch (err: any) {
+      console.error("API Error:", err);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "⚠️ Something went wrong. Please try again.",
+          content: `⚠️ ${err.message || "Something went wrong. Please try again."}`,
           messageId: Date.now().toString() + "-error",
         },
       ]);
-      console.error("API Error:", err);
     } finally {
       setLoading(false);
     }
@@ -414,7 +493,7 @@ export default function AppPage() {
   };
 
   const handleSignOut = async () => {
-    localStorage.removeItem('lastConversationId');
+    localStorage.removeItem("lastConversationId");
     await supabase.auth.signOut();
     router.push("/");
   };
@@ -434,18 +513,63 @@ export default function AppPage() {
     }
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return;
+
+    const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+    const allowedExt = ["pdf", "txt", "doc", "docx"];
+    const files = Array.from(event.target.files);
+    const valid: File[] = [];
+
+    for (const file of files) {
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (!ext || !allowedExt.includes(ext)) {
+        alert(
+          `File "${file.name}" is not supported. Allowed: PDF, TXT, DOC, DOCX.`
+        );
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        alert(
+          `File "${file.name}" is larger than 10MB. Please upload a smaller file.`
+        );
+        continue;
+      }
+      valid.push(file);
+    }
+
+    if (valid.length > 0) {
+      setAttachedFiles((prev) => [...prev, ...valid]);
+    }
+
+    // Reset input so the same file can be selected again later if needed
+    event.target.value = "";
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const inputPlaceholder = isPro
+    ? "Ask anything, or attach files (PDF/TXT/DOC) for deeper analysis..."
+    : "Ask a question or request a story. Upgrade to Pro to attach files.";
+
   if (isLoadingUser) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #faf5ff 0%, #fff 100%)"
-      }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #faf5ff 0%, #fff 100%)",
+        }}
+      >
         <Stack align="center" gap="md">
           <Loader size="lg" color="grape" />
-          <Text size="sm" c="dimmed">Loading Aidanna...</Text>
+          <Text size="sm" c="dimmed">
+            Loading Aidanna...
+          </Text>
         </Stack>
       </div>
     );
@@ -468,7 +592,9 @@ export default function AppPage() {
 
         {/* Language Selector */}
         <Box mt="sm">
-          <Text size="xs" c="dimmed" mb={4}>Language</Text>
+          <Text size="xs" c="dimmed" mb={4}>
+            Language
+          </Text>
           <select
             value={selectedLanguage}
             onChange={(e) => setSelectedLanguage(e.target.value)}
@@ -512,19 +638,29 @@ export default function AppPage() {
                 style={{
                   padding: "8px 10px",
                   borderRadius: 6,
-                  background: conversationId === conv.id ? "#f3e8ff" : "transparent",
-                  border: conversationId === conv.id ? "1px solid #9333ea" : "1px solid transparent",
+                  background:
+                    conversationId === conv.id ? "#f3e8ff" : "transparent",
+                  border:
+                    conversationId === conv.id
+                      ? "1px solid #9333ea"
+                      : "1px solid transparent",
                   cursor: "pointer",
                   transition: "all 0.2s",
                 }}
                 className="conv-item"
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === "Enter" && loadConversationMessages(conv.id)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && loadConversationMessages(conv.id)
+                }
               >
                 <Group justify="space-between" wrap="nowrap">
                   <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
-                    <IconMessage size={14} color="#868e96" style={{ flexShrink: 0 }} />
+                    <IconMessage
+                      size={14}
+                      color="#868e96"
+                      style={{ flexShrink: 0 }}
+                    />
                     <Text size="xs" truncate style={{ flex: 1 }}>
                       {conv.title}
                     </Text>
@@ -559,7 +695,12 @@ export default function AppPage() {
           </Avatar>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Group gap={4} wrap="nowrap">
-              <Text size="xs" fw={500} truncate title={user?.user_metadata?.name || user?.email}>
+              <Text
+                size="xs"
+                fw={500}
+                truncate
+                title={user?.user_metadata?.name || user?.email}
+              >
                 {user?.user_metadata?.name || user?.email}
               </Text>
               {isPro && (
@@ -600,7 +741,11 @@ export default function AppPage() {
                 <Menu.Item
                   leftSection={<IconCrown style={{ width: rem(12) }} />}
                   onClick={goUpgrade}
-                  style={{ fontSize: 13, fontWeight: 600, color: '#ca8a04' }}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#ca8a04",
+                  }}
                 >
                   Upgrade to Pro
                 </Menu.Item>
@@ -645,30 +790,51 @@ export default function AppPage() {
         size={280}
         padding="md"
         title={
-          // CLICKABLE brand in drawer title -> goes home and closes drawer
           <Group
             gap="xs"
-            onClick={() => { closeDrawer(); goHome(); }}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); closeDrawer(); goHome(); } }}
+            onClick={() => {
+              closeDrawer();
+              goHome();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                closeDrawer();
+                goHome();
+              }
+            }}
             style={{ cursor: "pointer" }}
             role="button"
             tabIndex={0}
             aria-label="Go to home"
           >
-            <Image src="/logo.png" alt="Aidanna" width={24} height={24} style={{ borderRadius: 6 }} />
+            <Image
+              src="/logo.png"
+              alt="Aidanna"
+              width={24}
+              height={24}
+              style={{ borderRadius: 6 }}
+            />
             <Text fw={700}>Aidanna</Text>
           </Group>
         }
         styles={{
           content: { display: "flex", flexDirection: "column" },
-          body: { flex: 1, display: "flex", flexDirection: "column", padding: 0 }
+          body: { flex: 1, display: "flex", flexDirection: "column", padding: 0 },
         }}
       >
         <SidebarContent />
       </Drawer>
 
       {/* Main Area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+        }}
+      >
         {/* Header */}
         <Paper
           shadow="xs"
@@ -680,7 +846,12 @@ export default function AppPage() {
           }}
         >
           <Container size="lg" h="100%">
-            <Group justify="space-between" align="center" h="100%" wrap="nowrap">
+            <Group
+              justify="space-between"
+              align="center"
+              h="100%"
+              wrap="nowrap"
+            >
               <Group gap="sm" wrap="nowrap">
                 {isMobile && (
                   <Burger
@@ -691,7 +862,6 @@ export default function AppPage() {
                   />
                 )}
 
-                {/* CLICKABLE brand in header -> goes to / */}
                 <Image
                   src="/logo.png"
                   alt="Aidanna"
@@ -728,10 +898,14 @@ export default function AppPage() {
                 </Group>
               </Group>
 
-              {/* Avatar Menu (Top-right) */}
+              {/* Avatar Menu */}
               <Menu shadow="md" width={220}>
                 <Menu.Target>
-                  <ActionIcon variant="subtle" size="lg" aria-label="Account menu">
+                  <ActionIcon
+                    variant="subtle"
+                    size="lg"
+                    aria-label="Account menu"
+                  >
                     <Avatar size="sm" radius="md" color="grape">
                       {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
                     </Avatar>
@@ -740,7 +914,9 @@ export default function AppPage() {
                 <Menu.Dropdown>
                   <Menu.Label style={{ fontSize: 12 }}>
                     <Group gap={6}>
-                      <span>{user?.user_metadata?.name || user?.email}</span>
+                      <span>
+                        {user?.user_metadata?.name || user?.email}
+                      </span>
                       {isPro && (
                         <Badge
                           size="xs"
@@ -773,7 +949,10 @@ export default function AppPage() {
                       onClick={() => setSelectedLanguage(lang.value)}
                       style={{
                         fontSize: 12,
-                        background: selectedLanguage === lang.value ? "#f3e8ff" : "transparent"
+                        background:
+                          selectedLanguage === lang.value
+                            ? "#f3e8ff"
+                            : "transparent",
                       }}
                     >
                       {lang.flag} {lang.label}
@@ -785,7 +964,7 @@ export default function AppPage() {
                     <Menu.Item
                       leftSection={<IconCrown style={{ width: rem(14) }} />}
                       onClick={goUpgrade}
-                      style={{ color: '#ca8a04', fontWeight: 600 }}
+                      style={{ color: "#ca8a04", fontWeight: 600 }}
                     >
                       Upgrade to Pro
                     </Menu.Item>
@@ -808,10 +987,14 @@ export default function AppPage() {
         <div style={{ flex: 1, overflowY: "auto", background: "#fafafa" }}>
           <Container size="md" py={isMobile ? "xs" : "sm"}>
             {messages.length === 0 ? (
-              <Stack align="center" gap={isMobile ? "sm" : "md"} mt={isMobile ? 8 : 16}>
+              <Stack
+                align="center"
+                gap={isMobile ? "sm" : "md"}
+                mt={isMobile ? 8 : 16}
+              >
                 <Text size={isMobile ? "sm" : "md"} c="dimmed">
-                  Hi {user?.user_metadata?.name?.split(' ')[0] || 'there'}
-                  {isPro && ' ✨'}
+                  Hi {user?.user_metadata?.name?.split(" ")[0] || "there"}
+                  {isPro && " ✨"}
                 </Text>
                 <Text size={isMobile ? "xl" : "2xl"} fw={700} ta="center">
                   What will you learn today?
@@ -842,8 +1025,13 @@ export default function AppPage() {
                 <Divider w="100%" my={isMobile ? "xs" : "sm"} />
 
                 <Stack gap={isMobile ? "xs" : "sm"} w="100%">
-                  <Text size="xs" c="dimmed" ta="center">Try one of these:</Text>
-                  <SimpleGrid cols={{ base: 1, sm: 3 }} spacing={isMobile ? "xs" : "sm"}>
+                  <Text size="xs" c="dimmed" ta="center">
+                    Try one of these:
+                  </Text>
+                  <SimpleGrid
+                    cols={{ base: 1, sm: 3 }}
+                    spacing={isMobile ? "xs" : "sm"}
+                  >
                     {LEARNING_PROMPTS.map((prompt, idx) => (
                       <Card
                         key={idx}
@@ -856,13 +1044,21 @@ export default function AppPage() {
                         className="hover-card"
                         role="button"
                         tabIndex={0}
-                        onKeyDown={(e) => e.key === "Enter" && handlePromptClick(prompt.text)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handlePromptClick(prompt.text)
+                        }
                         aria-label={`Use prompt: ${prompt.text}`}
                         title={prompt.text}
                       >
                         <Stack gap="xs">
                           <prompt.icon size={18} color="#868e96" />
-                          <Text size="xs" c="dimmed" style={{ lineHeight: 1.4 }}>{prompt.text}</Text>
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                            style={{ lineHeight: 1.4 }}
+                          >
+                            {prompt.text}
+                          </Text>
                         </Stack>
                       </Card>
                     ))}
@@ -871,67 +1067,116 @@ export default function AppPage() {
               </Stack>
             ) : (
               <Stack gap="md" mt="xs">
-                {messages.map((m) => (
-                  <Group key={m.messageId} align="flex-start" gap="sm" wrap="nowrap" justify={m.role === "user" ? "flex-end" : "flex-start"}>
-                    {m.role === "assistant" && (
-                      <Avatar size="sm" radius="md">
-                        <Image src="/logo.png" alt="Aidanna" width={22} height={22} style={{ borderRadius: 6 }} />
-                      </Avatar>
-                    )}
-
-                    <Paper
-                      shadow="xs"
-                      p={isMobile ? "xs" : "sm"}
-                      radius="lg"
-                      withBorder
-                      style={{
-                        maxWidth: isMobile ? "80%" : "75%",
-                        background: m.role === "user" ? "#2d2d2d" : "#ffffff",
-                        color: m.role === "user" ? "#ffffff" : "inherit",
-                        borderColor: m.role === "user" ? "transparent" : "#e9ecef",
-                      }}
+                {messages.map((m) => {
+                  const isUser = m.role === "user";
+                  return (
+                    <Group
+                      key={m.messageId}
+                      align="flex-start"
+                      gap="sm"
+                      wrap="nowrap"
+                      justify={isUser ? "flex-end" : "flex-start"}
                     >
-                      <Text size="sm" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                        {sanitizeText(m.content).split(/(\[.+?\]\(.+?\)\))/g).map((part, i) => {
-                          // Handle markdown links like [Upgrade to Premium](/upgrade)
-                          const linkMatch = part.match(/^\[(.+?)\]\((.+?)\)$/);
-                          if (linkMatch) {
-                            return (
-                              <a
-                                key={i}
-                                href={linkMatch[2]}
-                                style={{
-                                  color: m.role === "user" ? "#fff" : "#9333ea",
-                                  textDecoration: "underline",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {linkMatch[1]}
-                              </a>
-                            );
-                          }
-                          return <span key={i}>{part}</span>;
-                        })}
-                      </Text>
-                    </Paper>
+                      {!isUser && (
+                        <Avatar size="sm" radius="md">
+                          <Image
+                            src="/logo.png"
+                            alt="Aidanna"
+                            width={22}
+                            height={22}
+                            style={{ borderRadius: 6 }}
+                          />
+                        </Avatar>
+                      )}
 
-                    {m.role === "user" && (
-                      <Avatar size="sm" radius="md" color="grape">
-                        {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
-                      </Avatar>
-                    )}
-                  </Group>
-                ))}
+                      <Paper
+                        shadow="xs"
+                        p={isMobile ? "xs" : "sm"}
+                        radius="lg"
+                        withBorder
+                        style={{
+                          maxWidth: isMobile ? "80%" : "75%",
+                          background: isUser
+                            ? "linear-gradient(135deg, #7c3aed, #a855f7)"
+                            : "#ffffff",
+                          color: isUser ? "#ffffff" : "inherit",
+                          borderColor: isUser ? "transparent" : "#e9ecef",
+                          position: "relative",
+                        }}
+                      >
+                        {/* Copy button for assistant messages */}
+                        {m.role === "assistant" && (
+                          <ActionIcon
+                            size="xs"
+                            variant="subtle"
+                            style={{
+                              position: "absolute",
+                              top: 6,
+                              right: 6,
+                            }}
+                            aria-label="Copy message"
+                            onClick={() => handleCopy(m.content)}
+                          >
+                            <IconCopy size={14} />
+                          </ActionIcon>
+                        )}
+
+                        <Text
+                          size="sm"
+                          style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}
+                        >
+                          {sanitizeText(m.content)
+                            .split(/(\[.+?\]\(.+?\)\))/g)
+                            .map((part, i) => {
+                              // Handle markdown links like [Upgrade to Premium](/upgrade)
+                              const linkMatch =
+                                part.match(/^\[(.+?)\]\((.+?)\)$/);
+                              if (linkMatch) {
+                                return (
+                                  <a
+                                    key={i}
+                                    href={linkMatch[2]}
+                                    style={{
+                                      color: isUser ? "#fff" : "#9333ea",
+                                      textDecoration: "underline",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {linkMatch[1]}
+                                  </a>
+                                );
+                              }
+                              return <span key={i}>{part}</span>;
+                            })}
+                        </Text>
+                      </Paper>
+
+                      {isUser && (
+                        <Avatar size="sm" radius="md" color="grape">
+                          {user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
+                        </Avatar>
+                      )}
+                    </Group>
+                  );
+                })}
 
                 {loading && (
                   <Group align="flex-start" gap="sm">
                     <Avatar size="sm" radius="md">
-                      <Image src="/logo.png" alt="Aidanna" width={22} height={22} style={{ borderRadius: 6 }} />
+                      <Image
+                        src="/logo.png"
+                        alt="Aidanna"
+                        width={22}
+                        height={22}
+                        style={{ borderRadius: 6 }}
+                      />
                     </Avatar>
                     <Paper shadow="xs" p="sm" radius="lg" withBorder>
                       <Group gap="xs">
                         <IconLoader2 size={14} className="animate-spin" />
-                        <Text size="xs" c="dimmed">Crafting your story...</Text>
+                        <Text size="xs" c="dimmed">
+                          Thinking...
+                        </Text>
                       </Group>
                     </Paper>
                   </Group>
@@ -953,13 +1198,73 @@ export default function AppPage() {
           }}
         >
           <Container size="md" h="100%">
+            {/* Attached files (Pro only) */}
+            {isPro && attachedFiles.length > 0 && (
+              <Group gap="xs" mb="xs" align="center" wrap="wrap">
+                {attachedFiles.map((file, index) => (
+                  <Badge
+                    key={`${file.name}-${index}`}
+                    variant="outline"
+                    radius="xl"
+                    rightSection={
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        onClick={() => handleRemoveFile(index)}
+                        aria-label={`Remove ${file.name}`}
+                      >
+                        <IconX size={10} />
+                      </ActionIcon>
+                    }
+                    leftSection={<IconFileText size={12} />}
+                  >
+                    <Text size="xs" truncate maw={160}>
+                      {file.name}
+                    </Text>
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
             <Group align="flex-end" gap="xs" wrap="nowrap">
+              {/* Paperclip / File upload (Pro only) */}
+              <Tooltip
+                label={
+                  isPro
+                    ? "Attach files (PDF, TXT, DOC, DOCX, up to 10MB each)"
+                    : "Attach files with Aidanna Pro"
+                }
+                withArrow
+              >
+                <ActionIcon
+                  variant="subtle"
+                  radius="xl"
+                  size="lg"
+                  onClick={() =>
+                    isPro ? fileInputRef.current?.click() : goUpgrade()
+                  }
+                  aria-label="Attach files"
+                  disabled={loading}
+                >
+                  <IconPaperclip size={18} />
+                </ActionIcon>
+              </Tooltip>
+
+              <input
+                type="file"
+                multiple
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                accept=".pdf,.txt,.doc,.docx"
+                onChange={handleFileChange}
+              />
+
               <Textarea
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.currentTarget.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Say Hi, ask a question or request a story ..."
+                placeholder={inputPlaceholder}
                 radius="xl"
                 size="sm"
                 minRows={1}
@@ -977,14 +1282,18 @@ export default function AppPage() {
               <Button
                 size="sm"
                 radius="xl"
-                variant="filled"
-                color="grape"
+                variant="gradient"
+                gradient={{ from: "grape", to: "violet", deg: 45 }}
                 onClick={handleSendMessage}
                 disabled={!input.trim() || loading}
                 style={{ fontWeight: 700 }}
                 aria-label="Send message"
               >
-                {loading ? <IconLoader2 size={16} className="animate-spin" /> : "Ask"}
+                {loading ? (
+                  <IconLoader2 size={16} className="animate-spin" />
+                ) : (
+                  "Send"
+                )}
               </Button>
             </Group>
           </Container>
@@ -1000,8 +1309,12 @@ export default function AppPage() {
           background: #f8f9fa !important;
         }
         @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
         .animate-spin {
           animation: spin 1s linear infinite;
