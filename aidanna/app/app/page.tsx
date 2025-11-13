@@ -399,7 +399,7 @@ export default function AppPage() {
         if (res.status === 429) {
           // Daily limit reached - show upgrade message
           const upgradeMessage = json.upgrade_required
-            ? `⚠️ ${json.error}\n\n[Upgrade to Premium](/upgrade) for unlimited requests and priority access!`
+            ? `⚠️ ${json.error}\n\n[Upgrade to Premium]for unlimited requests and priority access!`
             : `⚠️ ${json.error}`;
 
           setMessages((prev) => [
