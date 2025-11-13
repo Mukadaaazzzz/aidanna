@@ -191,7 +191,7 @@ export default function UpgradePage() {
               <Stack gap={8}>
                 <Feature>Unlimited stories daily</Feature>
                 <Feature>Advanced story modes</Feature>
-                <Feature>Multilingual (Yoruba, Hausa & Igbo)</Feature>
+                <Feature>Multilingual (Standard)</Feature>
                 <Feature>PDF files support</Feature>
                 <Feature>Priority support</Feature>
               </Stack>
