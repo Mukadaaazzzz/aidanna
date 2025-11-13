@@ -399,7 +399,7 @@ export default function AppPage() {
         if (res.status === 429) {
           // Daily limit reached - show upgrade message
           const upgradeMessage = json.upgrade_required
-            ? `⚠️ ${json.error}\n\n[Upgrade to Premium] for unlimited requests and priority access!`
+            ? `⚠️ ${json.error}\n\n[Upgrade to Premium](/upgrade) for unlimited requests and priority access!`
             : `⚠️ ${json.error}`;
 
           setMessages((prev) => [
@@ -1296,9 +1296,13 @@ export default function AppPage() {
                 )}
               </Button>
             </Group>
+            
             {/* Disclaimer */}
             <Text size="xs" c="dimmed" ta="center" mt={6}>
               Aidanna can make mistakes. Please double-check responses.
+              {!isPro && selectedLanguage !== "english" && (
+                <span> Multilingual responses may be less accurate on the free tier.</span>
+              )}
             </Text>
           </Container>
         </Paper>
