@@ -31,8 +31,6 @@ export default function Pricing() {
         "Advanced story modes (Narrative, Dialogues)",
         "Multilingual (Yoruba, Hausa & Igbo)",
         "Pdf files support",
-        "Voice mode",
-        "Save & Export ",
         "Priority support"
       ],
       cta: "Go Pro",
