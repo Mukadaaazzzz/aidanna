@@ -193,8 +193,6 @@ export default function UpgradePage() {
                 <Feature>Advanced story modes</Feature>
                 <Feature>Multilingual (Yoruba, Hausa & Igbo)</Feature>
                 <Feature>PDF files support</Feature>
-                <Feature>Save & export stories</Feature>
-                <Feature>Voice mode</Feature>
                 <Feature>Priority support</Feature>
               </Stack>
 
