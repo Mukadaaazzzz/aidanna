@@ -1296,6 +1296,10 @@ export default function AppPage() {
                 )}
               </Button>
             </Group>
+            {/* Disclaimer */}
+            <Text size="xs" c="dimmed" ta="center" mt={6}>
+              Aidanna can make mistakes. Please double-check responses.
+            </Text>
           </Container>
         </Paper>
       </div>
