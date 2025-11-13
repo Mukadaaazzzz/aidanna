@@ -68,7 +68,9 @@ type UserProfile = {
 };
 
 // Get Supabase URL from environment or use your project URL
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://sblbfcrqdkussamkkhrk.supabase.co";
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  "https://sblbfcrqdkussamkkhrk.supabase.co";
 const API_BASE = `${SUPABASE_URL}/functions/v1`;
 
 const DEFAULT_MODES: Record<
@@ -80,8 +82,16 @@ const DEFAULT_MODES: Record<
 };
 
 const LEARNING_PROMPTS = [
-  { icon: IconFlask, text: "Explain photosynthesis through a story", category: "Science" },
-  { icon: IconBriefcase, text: "Teach me about supply and demand", category: "Business" },
+  {
+    icon: IconFlask,
+    text: "Explain photosynthesis through a story",
+    category: "Science",
+  },
+  {
+    icon: IconBriefcase,
+    text: "Teach me about supply and demand",
+    category: "Business",
+  },
   { icon: IconCpu, text: "How does machine learning work?", category: "Technology" },
 ];
 
@@ -103,8 +113,10 @@ export default function AppPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [usage, setUsage] = useState({ used: 0, remaining: 10, total: 10 });
   const [usageLoaded, setUsageLoaded] = useState(false);
-  const [drawerOpened, { open: openDrawer, close: closeDrawer, toggle: toggleDrawer }] =
-    useDisclosure(false);
+  const [
+    drawerOpened,
+    { open: openDrawer, close: closeDrawer, toggle: toggleDrawer },
+  ] = useDisclosure(false);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
 
@@ -116,7 +128,6 @@ export default function AppPage() {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const HEADER_HEIGHT = 60;
-  const COMPOSER_HEIGHT = 110;
   const SIDEBAR_WIDTH = 260;
 
   const LANGUAGES = [
@@ -166,6 +177,15 @@ export default function AppPage() {
       isMounted = false;
     };
   }, [router, supabase.auth]);
+
+useEffect(() => {
+  if (user) {
+    console.log("Auth user metadata:", user.user_metadata);
+    console.log("User identities:", user.identities); // Add this
+    console.log("Full user object:", user); // Add this
+  }
+}, [user]);
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -337,8 +357,10 @@ export default function AppPage() {
 
     try {
       // Get auth session for Supabase function calls
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         throw new Error("No active session. Please sign in again.");
       }
@@ -379,9 +401,9 @@ export default function AppPage() {
 
       const res = await fetch(`${API_BASE}/generate`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           prompt: userMsg.content,
@@ -399,7 +421,7 @@ export default function AppPage() {
         if (res.status === 429) {
           // Daily limit reached - show upgrade message
           const upgradeMessage = json.upgrade_required
-            ? `⚠️ ${json.error}\n\n[Upgrade to Premium]for unlimited requests and priority access!`
+            ? `⚠️ ${json.error}\n\n[Upgrade to Premium](/upgrade) for unlimited requests and priority access!`
             : `⚠️ ${json.error}`;
 
           setMessages((prev) => [
@@ -552,7 +574,7 @@ export default function AppPage() {
 
   const inputPlaceholder = isPro
     ? "Ask anything, or attach files (PDF/TXT/DOC) for deeper analysis..."
-    : "Ask a question or request a story. Upgrade to Pro to attach files.";
+    : "Ask a question or request a story.";
 
   if (isLoadingUser) {
     return (
@@ -766,13 +788,21 @@ export default function AppPage() {
   );
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        minHeight: "100vh",
+        height: "100dvh",
+        overflow: "hidden",
+      }}
+    >
       {/* Sidebar - Desktop Only */}
       {!isMobile && sidebarOpen && (
         <Paper
           style={{
             width: SIDEBAR_WIDTH,
-            height: "100vh",
+            height: "100%",
             borderRight: "1px solid #e9ecef",
             display: "flex",
             flexDirection: "column",
@@ -820,7 +850,12 @@ export default function AppPage() {
         }
         styles={{
           content: { display: "flex", flexDirection: "column" },
-          body: { flex: 1, display: "flex", flexDirection: "column", padding: 0 },
+          body: {
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            padding: 0,
+          },
         }}
       >
         <SidebarContent />
@@ -832,7 +867,8 @@ export default function AppPage() {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
+          height: "100%",
+          maxWidth: "100%",
         }}
       >
         {/* Header */}
@@ -875,7 +911,7 @@ export default function AppPage() {
                 <Group gap={8}>
                   <Text
                     fw={700}
-                    size="lg"
+                    size={isMobile ? "md" : "lg"}
                     onClick={goHome}
                     onKeyDown={onBrandKeyDown}
                     role="button"
@@ -914,9 +950,7 @@ export default function AppPage() {
                 <Menu.Dropdown>
                   <Menu.Label style={{ fontSize: 12 }}>
                     <Group gap={6}>
-                      <span>
-                        {user?.user_metadata?.name || user?.email}
-                      </span>
+                      <span>{user?.user_metadata?.name || user?.email}</span>
                       {isPro && (
                         <Badge
                           size="xs"
@@ -984,8 +1018,19 @@ export default function AppPage() {
         </Paper>
 
         {/* Messages Area */}
-        <div style={{ flex: 1, overflowY: "auto", background: "#fafafa" }}>
-          <Container size="md" py={isMobile ? "xs" : "sm"}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            background: "#fafafa",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          <Container
+            size="md"
+            py={isMobile ? "xs" : "sm"}
+            style={{ paddingInline: isMobile ? 8 : undefined }}
+          >
             {messages.length === 0 ? (
               <Stack
                 align="center"
@@ -996,18 +1041,23 @@ export default function AppPage() {
                   Hi {user?.user_metadata?.name?.split(" ")[0] || "there"}
                   {isPro && " ✨"}
                 </Text>
-                <Text size={isMobile ? "xl" : "2xl"} fw={700} ta="center">
+                <Text
+                  size={isMobile ? "xl" : "2xl"}
+                  fw={700}
+                  ta="center"
+                  style={{ paddingInline: isMobile ? 8 : 0 }}
+                >
                   What will you learn today?
                 </Text>
 
-                <Group gap="xs" justify="center">
+                <Group gap="xs" justify="center" wrap="wrap">
                   {Object.entries(DEFAULT_MODES).map(([key, mode]) => {
                     const Icon = mode.icon;
                     const isActive = selectedMode === key;
                     return (
                       <Button
                         key={key}
-                        size="xs"
+                        size={isMobile ? "xs" : "sm"}
                         variant={isActive ? "filled" : "light"}
                         color={mode.color}
                         leftSection={<Icon size={14} />}
@@ -1095,13 +1145,14 @@ export default function AppPage() {
                         radius="lg"
                         withBorder
                         style={{
-                          maxWidth: isMobile ? "80%" : "75%",
+                          maxWidth: isMobile ? "85%" : "75%",
                           background: isUser
                             ? "linear-gradient(135deg, #7c3aed, #a855f7)"
                             : "#ffffff",
                           color: isUser ? "#ffffff" : "inherit",
                           borderColor: isUser ? "transparent" : "#e9ecef",
                           position: "relative",
+                          wordBreak: "break-word",
                         }}
                       >
                         {/* Copy button for assistant messages */}
@@ -1191,13 +1242,17 @@ export default function AppPage() {
         <Paper
           shadow="lg"
           p="sm"
+          className="composer-paper"
           style={{
             borderTop: "1px solid #e9ecef",
             background: "#fff",
-            height: COMPOSER_HEIGHT,
           }}
         >
-          <Container size="md" h="100%">
+          <Container
+            size="md"
+            h="100%"
+            style={{ paddingInline: isMobile ? 8 : undefined }}
+          >
             {/* Attached files (Pro only) */}
             {isPro && attachedFiles.length > 0 && (
               <Group gap="xs" mb="xs" align="center" wrap="wrap">
@@ -1227,37 +1282,37 @@ export default function AppPage() {
             )}
 
             <Group align="flex-end" gap="xs" wrap="nowrap">
-              {/* Paperclip / File upload (Pro only) */}
-              <Tooltip
-                label={
-                  isPro
-                    ? "Attach files (PDF, TXT, DOC, DOCX, up to 10MB each)"
-                    : "Attach files with Aidanna Pro"
-                }
-                withArrow
-              >
-                <ActionIcon
-                  variant="subtle"
-                  radius="xl"
-                  size="lg"
-                  onClick={() =>
-                    isPro ? fileInputRef.current?.click() : goUpgrade()
-                  }
-                  aria-label="Attach files"
-                  disabled={loading}
-                >
-                  <IconPaperclip size={18} />
-                </ActionIcon>
-              </Tooltip>
+              {/* Paperclip / File upload (Pro only, hidden for free users) */}
+              {isPro && (
+                <>
+                  <Tooltip
+                    label={
+                      "Attach files (PDF, TXT, DOC, DOCX, up to 10MB each)"
+                    }
+                    withArrow
+                  >
+                    <ActionIcon
+                      variant="subtle"
+                      radius="xl"
+                      size="lg"
+                      onClick={() => fileInputRef.current?.click()}
+                      aria-label="Attach files"
+                      disabled={loading}
+                    >
+                      <IconPaperclip size={18} />
+                    </ActionIcon>
+                  </Tooltip>
 
-              <input
-                type="file"
-                multiple
-                ref={fileInputRef}
-                style={{ display: "none" }}
-                accept=".pdf,.txt,.doc,.docx"
-                onChange={handleFileChange}
-              />
+                  <input
+                    type="file"
+                    multiple
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    accept=".pdf,.txt,.doc,.docx"
+                    onChange={handleFileChange}
+                  />
+                </>
+              )}
 
               <Textarea
                 ref={textareaRef}
@@ -1268,7 +1323,7 @@ export default function AppPage() {
                 radius="xl"
                 size="sm"
                 minRows={1}
-                maxRows={3}
+                maxRows={4}
                 autosize
                 style={{ flex: 1 }}
                 styles={{
@@ -1280,13 +1335,13 @@ export default function AppPage() {
                 aria-label="Message input"
               />
               <Button
-                size="sm"
+                size={isMobile ? "xs" : "sm"}
                 radius="xl"
                 variant="gradient"
                 gradient={{ from: "grape", to: "violet", deg: 45 }}
                 onClick={handleSendMessage}
                 disabled={!input.trim() || loading}
-                style={{ fontWeight: 700 }}
+                style={{ fontWeight: 700, flexShrink: 0 }}
                 aria-label="Send message"
               >
                 {loading ? (
@@ -1296,12 +1351,21 @@ export default function AppPage() {
                 )}
               </Button>
             </Group>
-            
+
             {/* Disclaimer */}
-            <Text size="xs" c="dimmed" ta="center" mt={6}>
+            <Text
+              size="xs"
+              c="dimmed"
+              ta="center"
+              mt={6}
+              style={{ paddingInline: isMobile ? 8 : 0 }}
+            >
               Aidanna can make mistakes. Please double-check responses.
               {!isPro && selectedLanguage !== "english" && (
-                <span> Multilingual responses may be less accurate on the free tier.</span>
+                <span>
+                  {" "}
+                  Multilingual responses may be less accurate on the free tier.
+                </span>
               )}
             </Text>
           </Container>
@@ -1332,6 +1396,12 @@ export default function AppPage() {
           outline: 3px solid #c4b5fd;
           outline-offset: 2px;
           border-radius: 8px;
+        }
+        /* Improve mobile spacing for the composer */
+        @media (max-width: 768px) {
+          .composer-paper {
+            padding-bottom: env(safe-area-inset-bottom);
+          }
         }
       `}</style>
     </div>
